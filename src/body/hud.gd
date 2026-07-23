@@ -201,6 +201,14 @@ func _create_inventory() -> void:
 	split_button.tooltip_text = "Split the selected hotbar stack in half"
 	split_button.pressed.connect(func(): game.split_selected_stack())
 	item_actions.add_child(split_button)
+	var move_left_button := Button.new()
+	move_left_button.text = "← MOVE"
+	move_left_button.pressed.connect(func(): game.move_selected_slot(-1))
+	item_actions.add_child(move_left_button)
+	var move_right_button := Button.new()
+	move_right_button.text = "MOVE →"
+	move_right_button.pressed.connect(func(): game.move_selected_slot(1))
+	item_actions.add_child(move_right_button)
 	var drop_one_button := Button.new()
 	drop_one_button.text = "DROP ONE"
 	drop_one_button.pressed.connect(func(): game.drop_selected_item(1))

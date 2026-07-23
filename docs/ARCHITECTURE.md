@@ -35,6 +35,10 @@ real Unix timestamp. Writes go to a temporary file, rotate the prior primary to
 `.bak`, then promote the temporary file. Load attempts primary, then backup,
 then a sanitized new game.
 
+Resource records include stable ID, kind, item ID, quantity, transform, and an
+authored/dynamic flag. This lets player-dropped stacks reconstruct as physical
+objects after reload instead of being reduced to unrecoverable counters.
+
 ## Building contract
 
 Definitions provide dimensions, cost, snap category, tier, health, upkeep,
@@ -50,4 +54,3 @@ state.
 - Add stations/knowledge through already-present recipe requirements.
 - Add damage, repair, demolition, upkeep, and decay through build record hooks.
 - Replace placeholder tones through an audio event map; visual messages remain.
-

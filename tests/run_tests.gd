@@ -157,6 +157,12 @@ func _test_save_migration() -> void:
 	_expect_equal(migrated.schema_version, Tune.SCHEMA_VERSION, "save schema migrates")
 	_expect_equal(migrated.warmth, 44.0, "legacy temperature migrates to warmth")
 	_expect_true(migrated.has("stable_ids"), "migration adds stable IDs")
+	_expect_true(migrated.resources.has("loose_wood_01") or old.resources.is_empty(), "migration converts authored resource state")
+	var version_two := WorldState.new_game(100)
+	version_two.schema_version = 2
+	version_two.resources = {"loose_wood_01": 1}
+	var resource_migration := SaveCodec.decode(JSON.stringify(version_two))
+	_expect_equal(resource_migration.resources.loose_wood_01.quantity, 1, "v2 resource quantities migrate to reconstructible records")
 
 func _test_corrupt_save_recovery() -> void:
 	_expect_true(SaveCodec.decode("{bad json").is_empty(), "corrupt JSON is rejected")
@@ -250,6 +256,11 @@ func _test_body_interaction_contracts() -> void:
 	game.inventory.add("stone_tool", 1)
 	_expect_true(not game.is_tool_equipped(0), "tool effectiveness ignores an unequipped inventory tool")
 	_expect_true(game.is_tool_equipped(1), "selected hotbar tool governs harvesting")
+	game.player = PlayerController.new()
+	game.player.selected_hotbar = 0
+	game.move_selected_slot(1)
+	_expect_equal(game.inventory.slots[1].item_id, "driftwood", "inventory move controls reorder the selected slot")
+	game.player.free()
 	game.free()
 	var touch := TouchControls.new()
 	touch._ready()
@@ -260,6 +271,30 @@ func _test_body_interaction_contracts() -> void:
 	for number in ["1", "2", "3", "4", "5", "6"]:
 		_expect_true(number in button_texts, "touch hotbar exposes slot %s" % number)
 	touch.free()
+
+	var persistent_drop := WorldState.new_game(100)
+	persistent_drop.resources = {
+		"drop_00000001": {
+			"save_id": "drop_00000001",
+			"kind": "loose",
+			"item_id": "stone",
+			"quantity": 3,
+			"position": [4.0, 0.25, 9.0],
+			"rotation_degrees": [0.0, 20.0, 0.0],
+			"dynamic": true
+		}
+	}
+	var restored_drop := SaveCodec.decode(SaveCodec.encode(persistent_drop))
+	_expect_equal(restored_drop.resources.drop_00000001.quantity, 3, "dynamic dropped-item quantity persists")
+	_expect_equal(restored_drop.resources.drop_00000001.position, [4.0, 0.25, 9.0], "dynamic dropped-item transform persists")
+	var restore_game := GameRoot.new()
+	var restore_builder := WorldBuilder.new()
+	restore_builder.game = restore_game
+	restore_builder._create_resources(restored_drop.resources)
+	_expect_true(restore_game.resource_nodes.has("drop_00000001"), "dynamic dropped item reconstructs into the world")
+	_expect_equal(restore_game.resource_nodes.drop_00000001.quantity, 3, "reconstructed dropped item preserves quantity")
+	restore_builder.free()
+	restore_game.free()
 
 func _test_save_file_round_trip() -> void:
 	var path := "user://test_world_round_trip.json"

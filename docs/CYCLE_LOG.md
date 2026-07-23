@@ -26,7 +26,7 @@ CI, Pages, Windows, Android, and tag-release definitions.
 
 ### Verification
 
-Godot 4.6.3 official build `7d41c59c4` passed 69 assertions including a
+Godot 4.6.3 official build `7d41c59c4` passed 76 assertions including a
 240-case deterministic property sweep, passed architecture/secret validation,
 completed a clean composition-root smoke, booted the complete main scene for
 180 frames, and produced a rendered 1280×720 smoke capture through the

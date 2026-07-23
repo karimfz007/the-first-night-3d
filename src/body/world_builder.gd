@@ -95,7 +95,35 @@ func _create_authored_landmarks() -> void:
 
 func _create_resources(saved: Dictionary) -> void:
 	for raw: Array in WorldSliceDB.RESOURCES:
-		var amount := int(saved.get(str(raw[0]), raw[3]))
+		var saved_value: Variant = saved.get(str(raw[0]), {})
+		var amount := int(saved_value.get("quantity", raw[3])) if saved_value is Dictionary else int(saved_value)
 		var node := ResourceNode.new().configure(str(raw[0]), str(raw[1]), str(raw[2]), amount, raw[4], raw[5])
 		add_child(node)
 		game.register_resource(node)
+	for save_id: String in saved:
+		if game.resource_nodes.has(save_id):
+			continue
+		var record: Variant = saved[save_id]
+		if record is not Dictionary or not bool(record.get("dynamic", false)):
+			continue
+		var position_value := _vector(record.get("position", [0.0, 0.25, 0.0]))
+		var rotation_value := _vector(record.get("rotation_degrees", [0.0, 0.0, 0.0]))
+		var node := ResourceNode.new().configure(
+			save_id,
+			str(record.get("kind", "loose")),
+			str(record.get("item_id", "")),
+			maxi(0, int(record.get("quantity", 0))),
+			position_value,
+			rotation_value
+		)
+		add_child(node)
+		game.register_resource(node)
+
+func _vector(raw: Variant) -> Vector3:
+	if raw is Array and raw.size() >= 3:
+		return Vector3(
+			Tune.finite_number(raw[0], 0.0),
+			Tune.finite_number(raw[1], 0.0),
+			Tune.finite_number(raw[2], 0.0)
+		)
+	return Vector3.ZERO

@@ -7,7 +7,7 @@ var crafting := CraftingService.new()
 var stable_ids: StableIds
 var world_seconds := Tune.START_WORLD_SECONDS
 var warmth := Tune.WARMTH_START
-var resource_amounts: Dictionary = {}
+var resource_records: Dictionary = {}
 var resource_nodes: Dictionary = {}
 var building_records: Array[Dictionary] = []
 var build_nodes: Dictionary = {}
@@ -36,7 +36,7 @@ func _ready() -> void:
 	world_builder = WorldBuilder.new()
 	world_builder.name = "Authored Island"
 	add_child(world_builder)
-	world_builder.build(self, resource_amounts)
+	world_builder.build(self, resource_records)
 	_restore_buildings()
 	player = PlayerController.new().configure(self, state.player.settings)
 	add_child(player)
@@ -95,7 +95,7 @@ func _load_state() -> void:
 	stable_ids = StableIds.from_dict(state.get("stable_ids", {}))
 	world_seconds = float(state.get("world_seconds", Tune.START_WORLD_SECONDS))
 	warmth = float(state.get("warmth", Tune.WARMTH_START))
-	resource_amounts = state.get("resources", {}).duplicate(true)
+	resource_records = state.get("resources", {}).duplicate(true)
 	for raw: Variant in state.get("buildings", []):
 		if raw is Dictionary:
 			building_records.append(raw.duplicate(true))
@@ -113,10 +113,22 @@ func _restore_player_transform() -> void:
 
 func register_resource(node: ResourceNode) -> void:
 	resource_nodes[node.save_id] = node
-	resource_amounts[node.save_id] = node.quantity
+	resource_records[node.save_id] = {
+		"save_id": node.save_id,
+		"kind": node.node_kind,
+		"item_id": node.item_id,
+		"quantity": node.quantity,
+		"position": [node.position.x, node.position.y, node.position.z],
+		"rotation_degrees": [node.rotation_degrees.x, node.rotation_degrees.y, node.rotation_degrees.z],
+		"dynamic": node.save_id.begins_with("drop_")
+	}
 
 func resource_changed(save_id: String, quantity: int) -> void:
-	resource_amounts[save_id] = maxi(0, quantity)
+	if not resource_records.has(save_id):
+		return
+	var record: Dictionary = resource_records[save_id]
+	record["quantity"] = maxi(0, quantity)
+	resource_records[save_id] = record
 
 func receive_item(item_id: String, amount: int, world_position: Vector3) -> Dictionary:
 	var result := inventory.add(item_id, amount)
@@ -195,6 +207,16 @@ func drop_selected_item(quantity: int) -> void:
 	var drop_position := player.global_position + -player.global_basis.z * 1.1
 	spawn_loose_item(str(dropped.item_id), int(dropped.quantity), drop_position)
 	notify_player("Dropped %s ×%d" % [ItemDB.display_name(str(dropped.item_id)), int(dropped.quantity)], "confirm")
+
+func move_selected_slot(direction: int) -> void:
+	var from_index := player.selected_hotbar
+	var to_index := from_index + direction
+	if from_index < 0 or from_index >= inventory.slots.size() or to_index < 0 or to_index >= inventory.slots.size():
+		notify_player("No inventory slot in that direction.", "fail")
+		return
+	if inventory.move_slot(from_index, to_index):
+		player.select_hotbar(to_index)
+		notify_player("Item moved in the pack.", "confirm")
 
 func get_build_preview(piece_id: String, hit_position: Vector3, normal: Vector3, rotation_y: float, player_position: Vector3) -> Dictionary:
 	var definition := BuildingDB.get_piece(piece_id)
@@ -459,7 +481,7 @@ func save_now(reason: String = "autosave") -> bool:
 		"crafting": crafting.to_dict(),
 		"buildings": live_buildings,
 		"fires": fire_records,
-		"resources": resource_amounts.duplicate(true),
+		"resources": resource_records.duplicate(true),
 		"world_seconds": world_seconds,
 		"warmth": warmth,
 		"stable_ids": stable_ids.to_dict(),

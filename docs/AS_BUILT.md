@@ -18,7 +18,7 @@ ownership can be judged before an art package hardens the visual direction.
 | A7 | building definitions, preview validation, placed records, six piece types |
 | A8 | fire object, heat/fuel loop, shelter protection, HUD feedback |
 | A9–A10 | versioned save manager, reconciler, morning report, headless tests |
-| A11 | 69 passing local assertions, 240-case property sweep, full-scene smoke, and CI workflow |
+| A11 | 76 passing local assertions, 240-case property sweep, full-scene smoke, and CI workflow |
 | A1–A3, A12 | require remote GitHub/device/auditor evidence in addition to source |
 | A13 | dependency, architecture, pivot, limitation, performance, and as-built docs |
 

@@ -2,7 +2,7 @@ class_name Tune
 extends RefCounted
 ## Single source of gameplay and presentation tuning for vertical slice 0.1.
 
-const SCHEMA_VERSION := 2
+const SCHEMA_VERSION := 3
 const OWNER_ID := "player_local"
 
 # World clock and offline fairness.

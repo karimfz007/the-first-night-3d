@@ -31,7 +31,31 @@ static func migrate(raw: Dictionary) -> Dictionary:
 		state.erase("temperature")
 		if not state.has("stable_ids"):
 			state["stable_ids"] = {"counter": 1}
-		state["schema_version"] = 2
+		version = 2
+	if version == 2:
+		var migrated_resources := {}
+		for save_id: String in state.get("resources", {}):
+			var value: Variant = state.resources[save_id]
+			if value is Dictionary:
+				migrated_resources[save_id] = value.duplicate(true)
+				continue
+			var authored := WorldSliceDB.get_resource(save_id)
+			if authored.is_empty():
+				continue
+			var authored_position: Vector3 = authored[4]
+			var authored_rotation: Vector3 = authored[5]
+			migrated_resources[save_id] = {
+				"save_id": save_id,
+				"kind": str(authored[1]),
+				"item_id": str(authored[2]),
+				"quantity": maxi(0, int(value)),
+				"position": [authored_position.x, authored_position.y, authored_position.z],
+				"rotation_degrees": [authored_rotation.x, authored_rotation.y, authored_rotation.z],
+				"dynamic": false
+			}
+		state["resources"] = migrated_resources
+		version = 3
+	state["schema_version"] = version
 	return state
 
 static func save_file(state: Dictionary, path: String = SAVE_PATH) -> bool:

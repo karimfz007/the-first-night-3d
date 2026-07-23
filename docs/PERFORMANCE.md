@@ -16,7 +16,7 @@ Target: stable playable 30 FPS on the Director's Android device.
 
 ## Current evidence
 
-Pinned Godot 4.6.3 completed the 69-check test suite, static validation, a clean
+Pinned Godot 4.6.3 completed the 76-check test suite, static validation, a clean
 composition-root smoke, and a 180-frame full-scene headless boot on Windows. A
 real Compatibility-renderer capture completed at 1280×720 on an NVIDIA GeForce
 GTX 1650 without runtime errors. These checks establish source/runtime health,

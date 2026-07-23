@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 35
     steps:
       - name: Checkout tagged source and LFS
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           lfs: true
 
@@ -43,6 +43,18 @@ jobs:
             -storepass android -alias androiddebugkey -keypass android \
             -keyalg RSA -keysize 2048 -validity 10000 \
             -dname "CN=Android Debug,O=Android,C=US"
+          settings_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/godot"
+          mkdir -p "${settings_dir}"
+          printf '%s\n' \
+            '[gd_resource format=3]' \
+            '' \
+            '[resource]' \
+            "export/android/android_sdk_path = \"${ANDROID_HOME}\"" \
+            "export/android/java_sdk_path = \"${JAVA_HOME}\"" \
+            "export/android/debug_keystore = \"${HOME}/.android/debug.keystore\"" \
+            'export/android/debug_keystore_user = "androiddebugkey"' \
+            'export/android/debug_keystore_pass = "android"' \
+            > "${settings_dir}/editor_settings-4.6.tres"
 
       - name: Verify and export same tag
         run: |

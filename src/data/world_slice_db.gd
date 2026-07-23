@@ -28,3 +28,8 @@ static func total_item(item_id: String) -> int:
 			total += int(resource[3])
 	return total
 
+static func get_resource(save_id: String) -> Array:
+	for resource: Array in RESOURCES:
+		if str(resource[0]) == save_id:
+			return resource.duplicate(true)
+	return []
