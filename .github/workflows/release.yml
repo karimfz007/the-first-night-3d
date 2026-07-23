@@ -43,10 +43,14 @@ jobs:
             -storepass android -alias androiddebugkey -keypass android \
             -keyalg RSA -keysize 2048 -validity 10000 \
             -dname "CN=Android Debug,O=Android,C=US"
+          "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
+            "platform-tools" "build-tools;35.0.1" "platforms;android-35"
+          test -x "${ANDROID_HOME}/platform-tools/adb"
+          test -x "${ANDROID_HOME}/build-tools/35.0.1/apksigner"
           settings_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/godot"
           mkdir -p "${settings_dir}"
           printf '%s\n' \
-            '[gd_resource format=3]' \
+            '[gd_resource type="EditorSettings" format=3]' \
             '' \
             '[resource]' \
             "export/android/android_sdk_path = \"${ANDROID_HOME}\"" \
@@ -66,7 +70,10 @@ jobs:
           mkdir -p builds/windows builds/android
           godot --headless --path . --export-release "Windows" builds/windows/THE_FIRST_NIGHT.exe
           (cd builds/windows && zip -9 ../THE_FIRST_NIGHT-windows.zip THE_FIRST_NIGHT.exe)
-          godot --headless --path . --export-debug "Android" builds/android/the-first-night-debug.apk
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH="${HOME}/.android/debug.keystore" \
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey" \
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android" \
+            godot --headless --path . --export-debug "Android" builds/android/the-first-night-debug.apk
           (cd builds && sha256sum THE_FIRST_NIGHT-windows.zip android/the-first-night-debug.apk > SHA256SUMS.txt)
 
       - name: Create immutable prerelease

@@ -16,6 +16,10 @@ and `actions/deploy-pages@v4` (MIT). Purpose: source/LFS checkout, immutable
 workflow artifacts, and GitHub Pages deployment. Modifications: none. Exit path:
 replace each thin workflow step with `git`, the GitHub REST API, or `gh`.
 
+Android export CI pins OpenJDK 17 plus Android SDK Platform 35, Platform-Tools
+35.0.0 or later, and Build-Tools 35.0.1, following the Godot 4.6 export
+requirements. These are build-only tools and are not bundled with the game.
+
 ## Evaluated and not adopted
 
 | Candidate | Pin evaluated | License | Decision and exit |
