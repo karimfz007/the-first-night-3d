@@ -1,0 +1,403 @@
+class_name HUD
+extends CanvasLayer
+
+var game: Node
+var player: PlayerController
+var root: Control
+var objective_label: Label
+var horizon_label: Label
+var prompt_label: Label
+var toast_label: Label
+var warmth_bar: ProgressBar
+var stamina_bar: ProgressBar
+var time_label: Label
+var progress_bar: ProgressBar
+var hotbar: HBoxContainer
+var hotbar_labels: Array[Label] = []
+var inventory_panel: PanelContainer
+var inventory_text: RichTextLabel
+var crafting_panel: PanelContainer
+var crafting_queue_label: Label
+var debug_label: Label
+var build_label: Label
+var save_label: Label
+var _toast_remaining := 0.0
+var _refresh_timer := 0.0
+
+func configure(game_node: Node, player_node: PlayerController) -> HUD:
+	game = game_node
+	player = player_node
+	return self
+
+func _ready() -> void:
+	name = "HUD"
+	layer = 10
+	root = Control.new()
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(root)
+	_create_status()
+	_create_crosshair()
+	_create_hotbar()
+	_create_inventory()
+	_create_crafting()
+	_create_debug()
+
+func _process(delta: float) -> void:
+	if game == null or player == null:
+		return
+	_toast_remaining = maxf(0.0, _toast_remaining - delta)
+	toast_label.modulate.a = clampf(_toast_remaining, 0.0, 1.0)
+	_refresh_timer -= delta
+	if _refresh_timer <= 0.0:
+		_refresh_timer = 0.18
+		refresh()
+	if Input.is_action_just_pressed("inventory"):
+		toggle_inventory()
+	if Input.is_action_just_pressed("crafting"):
+		toggle_crafting()
+
+func _create_status() -> void:
+	var margin := MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	margin.add_theme_constant_override("margin_left", 24)
+	margin.add_theme_constant_override("margin_top", 20)
+	root.add_child(margin)
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 4)
+	margin.add_child(stack)
+	objective_label = Label.new()
+	objective_label.add_theme_font_size_override("font_size", 21)
+	objective_label.add_theme_color_override("font_color", Color(0.98, 0.86, 0.62))
+	stack.add_child(objective_label)
+	horizon_label = Label.new()
+	horizon_label.text = "%s\n%s" % [GameStrings.get_text("horizon_session"), GameStrings.get_text("horizon_long")]
+	horizon_label.add_theme_font_size_override("font_size", 13)
+	horizon_label.add_theme_color_override("font_color", Color(0.72, 0.78, 0.78))
+	stack.add_child(horizon_label)
+	time_label = Label.new()
+	time_label.add_theme_font_size_override("font_size", 15)
+	stack.add_child(time_label)
+	var bars := VBoxContainer.new()
+	bars.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	bars.position = Vector2(24, -92)
+	bars.custom_minimum_size = Vector2(220, 64)
+	root.add_child(bars)
+	var warmth_row := HBoxContainer.new()
+	var warmth_title := Label.new()
+	warmth_title.text = "WARMTH"
+	warmth_title.custom_minimum_size.x = 72
+	warmth_row.add_child(warmth_title)
+	warmth_bar = ProgressBar.new()
+	warmth_bar.min_value = Tune.WARMTH_MIN
+	warmth_bar.max_value = Tune.WARMTH_MAX
+	warmth_bar.show_percentage = false
+	warmth_bar.custom_minimum_size = Vector2(145, 15)
+	warmth_row.add_child(warmth_bar)
+	bars.add_child(warmth_row)
+	var stamina_row := HBoxContainer.new()
+	var stamina_title := Label.new()
+	stamina_title.text = "STAMINA"
+	stamina_title.custom_minimum_size.x = 72
+	stamina_row.add_child(stamina_title)
+	stamina_bar = ProgressBar.new()
+	stamina_bar.max_value = Tune.STAMINA_MAX
+	stamina_bar.show_percentage = false
+	stamina_bar.custom_minimum_size = Vector2(145, 12)
+	stamina_row.add_child(stamina_bar)
+	bars.add_child(stamina_row)
+	save_label = Label.new()
+	save_label.text = ""
+	save_label.add_theme_font_size_override("font_size", 12)
+	bars.add_child(save_label)
+
+func _create_crosshair() -> void:
+	var crosshair := Label.new()
+	crosshair.text = "·"
+	crosshair.add_theme_font_size_override("font_size", 30)
+	crosshair.add_theme_color_override("font_color", Color(1, 1, 1, 0.72))
+	crosshair.set_anchors_preset(Control.PRESET_CENTER)
+	crosshair.position = Vector2(-6, -21)
+	root.add_child(crosshair)
+	prompt_label = Label.new()
+	prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	prompt_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	prompt_label.position = Vector2(-260, 400)
+	prompt_label.custom_minimum_size = Vector2(520, 32)
+	prompt_label.add_theme_font_size_override("font_size", 17)
+	prompt_label.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78))
+	root.add_child(prompt_label)
+	progress_bar = ProgressBar.new()
+	progress_bar.set_anchors_preset(Control.PRESET_CENTER)
+	progress_bar.position = Vector2(-90, 48)
+	progress_bar.custom_minimum_size = Vector2(180, 8)
+	progress_bar.max_value = 1.0
+	progress_bar.show_percentage = false
+	progress_bar.visible = false
+	root.add_child(progress_bar)
+	toast_label = Label.new()
+	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	toast_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	toast_label.position = Vector2(-300, -142)
+	toast_label.custom_minimum_size = Vector2(600, 34)
+	toast_label.add_theme_font_size_override("font_size", 17)
+	toast_label.add_theme_color_override("font_color", Color(0.96, 0.87, 0.68))
+	root.add_child(toast_label)
+	build_label = Label.new()
+	build_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	build_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	build_label.position = Vector2(-300, 76)
+	build_label.custom_minimum_size = Vector2(600, 42)
+	build_label.add_theme_font_size_override("font_size", 18)
+	root.add_child(build_label)
+
+func _create_hotbar() -> void:
+	hotbar = HBoxContainer.new()
+	hotbar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	hotbar.position = Vector2(-252, -76)
+	hotbar.add_theme_constant_override("separation", 5)
+	root.add_child(hotbar)
+	for index in range(Tune.HOTBAR_SLOTS):
+		var panel := PanelContainer.new()
+		panel.name = "Slot %d" % (index + 1)
+		panel.custom_minimum_size = Vector2(78, 54)
+		var label := Label.new()
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.text = "%d\n—" % (index + 1)
+		panel.add_child(label)
+		hotbar.add_child(panel)
+		hotbar_labels.append(label)
+
+func _create_inventory() -> void:
+	inventory_panel = PanelContainer.new()
+	inventory_panel.set_anchors_preset(Control.PRESET_CENTER)
+	inventory_panel.position = Vector2(-330, -245)
+	inventory_panel.custom_minimum_size = Vector2(660, 490)
+	inventory_panel.visible = false
+	root.add_child(inventory_panel)
+	var margin := MarginContainer.new()
+	for side in ["left", "top", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 18)
+	inventory_panel.add_child(margin)
+	var columns := HBoxContainer.new()
+	columns.add_theme_constant_override("separation", 22)
+	margin.add_child(columns)
+	var inventory_column := VBoxContainer.new()
+	inventory_column.custom_minimum_size.x = 300
+	columns.add_child(inventory_column)
+	var title := Label.new()
+	title.text = "PACK"
+	title.add_theme_font_size_override("font_size", 24)
+	inventory_column.add_child(title)
+	inventory_text = RichTextLabel.new()
+	inventory_text.bbcode_enabled = true
+	inventory_text.fit_content = false
+	inventory_text.custom_minimum_size = Vector2(300, 380)
+	inventory_column.add_child(inventory_text)
+	var settings_column := VBoxContainer.new()
+	settings_column.custom_minimum_size.x = 290
+	columns.add_child(settings_column)
+	var settings_title := Label.new()
+	settings_title.text = "SETTINGS"
+	settings_title.add_theme_font_size_override("font_size", 24)
+	settings_column.add_child(settings_title)
+	_add_slider(settings_column, "Look sensitivity", "look_sensitivity", 0.0006, 0.006, 0.0001)
+	_add_slider(settings_column, "Touch sensitivity", "touch_sensitivity", 0.001, 0.009, 0.0001)
+	_add_slider(settings_column, "Motion / bob", "bob_intensity", 0.0, 1.0, 0.05)
+	_add_slider(settings_column, "Audio volume", "audio_volume", 0.0, 1.0, 0.05)
+	_add_slider(settings_column, "Touch scale", "touch_scale", Tune.TOUCH_MIN_SCALE, Tune.TOUCH_MAX_SCALE, 0.05)
+	var invert := CheckButton.new()
+	invert.text = "Invert look"
+	invert.button_pressed = bool(player.settings.get("invert_look", false))
+	invert.toggled.connect(func(value: bool): game.apply_setting("invert_look", value))
+	settings_column.add_child(invert)
+	var side := OptionButton.new()
+	side.add_item("Move left / look right")
+	side.add_item("Move right / look left")
+	side.selected = 1 if str(player.settings.get("control_side", "left_move")) == "right_move" else 0
+	side.item_selected.connect(func(index: int): game.apply_setting("control_side", "right_move" if index == 1 else "left_move"))
+	settings_column.add_child(side)
+	var save_button := Button.new()
+	save_button.text = "SAVE NOW"
+	save_button.pressed.connect(func(): game.save_now("explicit"))
+	settings_column.add_child(save_button)
+
+func _add_slider(parent: Control, title: String, key: String, minimum: float, maximum: float, step: float) -> void:
+	var label := Label.new()
+	label.text = title
+	parent.add_child(label)
+	var slider := HSlider.new()
+	slider.min_value = minimum
+	slider.max_value = maximum
+	slider.step = step
+	slider.value = float(player.settings.get(key, minimum))
+	slider.value_changed.connect(func(value: float): game.apply_setting(key, value))
+	parent.add_child(slider)
+
+func _create_crafting() -> void:
+	crafting_panel = PanelContainer.new()
+	crafting_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	crafting_panel.position = Vector2(-375, -205)
+	crafting_panel.custom_minimum_size = Vector2(350, 410)
+	crafting_panel.visible = false
+	root.add_child(crafting_panel)
+	var margin := MarginContainer.new()
+	for side in ["left", "top", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 18)
+	crafting_panel.add_child(margin)
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 10)
+	margin.add_child(stack)
+	var title := Label.new()
+	title.text = "HAND CRAFTING"
+	title.add_theme_font_size_override("font_size", 23)
+	stack.add_child(title)
+	for recipe: Dictionary in RecipeDB.all():
+		var button := Button.new()
+		button.text = "%s\n%s" % [recipe.name, _cost_text(recipe.ingredients)]
+		button.custom_minimum_size.y = 64
+		button.pressed.connect(_craft_pressed.bind(str(recipe.id)))
+		stack.add_child(button)
+	crafting_queue_label = Label.new()
+	crafting_queue_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	stack.add_child(crafting_queue_label)
+	var cancel_button := Button.new()
+	cancel_button.text = "Cancel current craft"
+	cancel_button.pressed.connect(func(): game.cancel_craft())
+	stack.add_child(cancel_button)
+
+func _create_debug() -> void:
+	debug_label = Label.new()
+	debug_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	debug_label.position = Vector2(-315, 18)
+	debug_label.custom_minimum_size = Vector2(290, 210)
+	debug_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	debug_label.add_theme_font_size_override("font_size", 13)
+	debug_label.add_theme_color_override("font_color", Color(0.65, 1.0, 0.7))
+	debug_label.visible = false
+	root.add_child(debug_label)
+
+func refresh() -> void:
+	warmth_bar.value = game.warmth
+	stamina_bar.value = player.stamina
+	objective_label.text = game.current_objective()
+	time_label.text = "%s  ·  %s  ·  FIRE %s" % [game.clock_text(), game.exposure_text(), game.fire_status_text()]
+	var inventory: Inventory = game.inventory
+	for index in range(Tune.HOTBAR_SLOTS):
+		var text := "%d\n—" % (index + 1)
+		if index < inventory.slots.size():
+			var slot: Dictionary = inventory.slots[index]
+			var definition := ItemDB.get_item(str(slot.item_id))
+			text = "%d  %s\n%s ×%d" % [index + 1, definition.get("icon", "•"), definition.get("name", slot.item_id), int(slot.quantity)]
+		hotbar_labels[index].text = text
+		hotbar_labels[index].modulate = Color(1.0, 0.84, 0.45) if index == player.selected_hotbar else Color.WHITE
+	if inventory_panel.visible:
+		var lines: Array[String] = []
+		for index in range(inventory.slots.size()):
+			var slot: Dictionary = inventory.slots[index]
+			lines.append("[color=#d8c79f]%02d[/color]  %s  ×%d" % [index + 1, ItemDB.display_name(str(slot.item_id)), int(slot.quantity)])
+		if lines.is_empty():
+			lines.append("[color=#888888]Empty. The beach is full of useful debris.[/color]")
+		inventory_text.text = "\n".join(lines) + "\n\n[color=#89979a]Stacks merge automatically. Overflow remains in the world.[/color]"
+	crafting_queue_label.text = game.crafting_text()
+	debug_label.visible = bool(player.settings.get("debug_overlay", false))
+	if debug_label.visible:
+		debug_label.text = game.debug_text()
+
+func toggle_inventory() -> void:
+	inventory_panel.visible = not inventory_panel.visible
+	if inventory_panel.visible:
+		crafting_panel.visible = false
+	player.set_menu_open(inventory_panel.visible or crafting_panel.visible)
+
+func toggle_crafting() -> void:
+	crafting_panel.visible = not crafting_panel.visible
+	if crafting_panel.visible:
+		inventory_panel.visible = false
+	player.set_menu_open(inventory_panel.visible or crafting_panel.visible)
+
+func set_prompt(text: String) -> void:
+	prompt_label.text = text
+
+func set_interaction_progress(value: float) -> void:
+	progress_bar.value = clampf(value, 0.0, 1.0)
+	progress_bar.visible = value > 0.0 and value < 1.0
+
+func notify(message: String) -> void:
+	toast_label.text = message
+	toast_label.modulate.a = 1.0
+	_toast_remaining = Tune.NOTIFICATION_SECONDS
+
+func set_hotbar_selection(index: int) -> void:
+	player.selected_hotbar = clampi(index, 0, Tune.HOTBAR_SLOTS - 1)
+
+func set_build_status(active: bool, piece_id: String, valid: bool, reason: String = "") -> void:
+	if not active:
+		build_label.text = ""
+		return
+	var definition := BuildingDB.get_piece(piece_id)
+	var color := "#7ee09a" if valid else "#ef766c"
+	build_label.text = "[%s] %s · %s" % ["VALID" if valid else "BLOCKED", definition.get("name", piece_id), reason]
+	build_label.add_theme_color_override("font_color", Color.html(color))
+
+func show_save_status(text: String) -> void:
+	save_label.text = text
+
+func show_morning_report(report: Dictionary) -> void:
+	var overlay := ColorRect.new()
+	overlay.name = "Morning Report"
+	overlay.color = Color(0.015, 0.025, 0.035, 0.92)
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(overlay)
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.position = Vector2(-310, -210)
+	panel.custom_minimum_size = Vector2(620, 420)
+	overlay.add_child(panel)
+	var margin := MarginContainer.new()
+	for side in ["left", "top", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 26)
+	panel.add_child(margin)
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 12)
+	margin.add_child(stack)
+	var title := Label.new()
+	title.text = "MORNING REPORT"
+	title.add_theme_font_size_override("font_size", 28)
+	stack.add_child(title)
+	var elapsed := float(report.get("elapsed_real_seconds", 0.0))
+	var advanced := float(report.get("world_advanced_seconds", 0.0))
+	var fire_duration := float(report.get("fire_duration_seconds", 0.0))
+	var body := Label.new()
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.custom_minimum_size.y = 230
+	body.text = "Away: %s\nWorld advanced: %s\nFire burned: %s\nFire went out: %s\nWarmth: %.1f → %.1f (%+.1f)\n\n%s" % [
+		_duration(elapsed), _duration(advanced), _duration(fire_duration),
+		"yes" if bool(report.get("fire_went_out", false)) else "no",
+		float(report.get("warmth_before", 0.0)), float(report.get("warmth_after", 0.0)),
+		float(report.get("warmth_change", 0.0)), str(report.get("cause", ""))
+	]
+	stack.add_child(body)
+	var close := Button.new()
+	close.text = "RETURN TO THE BEACH"
+	close.pressed.connect(func(): overlay.queue_free(); player.set_menu_open(false))
+	stack.add_child(close)
+	player.set_menu_open(true)
+
+func _craft_pressed(recipe_id: String) -> void:
+	game.request_craft(recipe_id)
+
+func _cost_text(cost: Dictionary) -> String:
+	var parts: Array[String] = []
+	for item_id: String in cost:
+		parts.append("%s ×%d" % [ItemDB.display_name(item_id), int(cost[item_id])])
+	return " · ".join(parts)
+
+func _duration(seconds: float) -> String:
+	var total := maxi(0, roundi(seconds))
+	if total >= 3600:
+		return "%dh %02dm" % [total / 3600, (total % 3600) / 60]
+	if total >= 60:
+		return "%dm %02ds" % [total / 60, total % 60]
+	return "%ds" % total
+

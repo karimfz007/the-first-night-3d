@@ -1,0 +1,71 @@
+name: prerelease
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: "4.6.3"
+  GODOT_STATUS: "stable"
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  build-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout tagged source and LFS
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Install pinned Godot and export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-${GODOT_STATUS}"
+          curl --fail --location --retry 3 -o /tmp/godot.zip \
+            "${base}/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          sudo install -m 0755 "/tmp/godot/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_linux.x86_64" /usr/local/bin/godot
+          curl --fail --location --retry 3 -o /tmp/templates.tpz \
+            "${base}/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_export_templates.tpz"
+          template_dir="${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}"
+          mkdir -p "${template_dir}"
+          unzip -q /tmp/templates.tpz -d /tmp/godot-templates
+          mv /tmp/godot-templates/templates/* "${template_dir}/"
+          mkdir -p "${HOME}/.android"
+          keytool -genkeypair -keystore "${HOME}/.android/debug.keystore" \
+            -storepass android -alias androiddebugkey -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Verify and export same tag
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+        run: |
+          set -euo pipefail
+          godot --headless --path . --import
+          godot --headless --path . --script tests/run_tests.gd
+          godot --headless --path . --script tools/static_validate.gd
+          mkdir -p builds/windows builds/android
+          godot --headless --path . --export-release "Windows" builds/windows/THE_FIRST_NIGHT.exe
+          (cd builds/windows && zip -9 ../THE_FIRST_NIGHT-windows.zip THE_FIRST_NIGHT.exe)
+          godot --headless --path . --export-debug "Android" builds/android/the-first-night-debug.apk
+          (cd builds && sha256sum THE_FIRST_NIGHT-windows.zip android/the-first-night-debug.apk > SHA256SUMS.txt)
+
+      - name: Create immutable prerelease
+        shell: bash
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --prerelease \
+            --title "THE FIRST NIGHT ${GITHUB_REF_NAME} — DRIFT" \
+            --notes "First-person 3D vertical-slice build from commit ${GITHUB_SHA}. Windows and Android were exported from this exact tag; SHA-256 checksums are attached." \
+            builds/THE_FIRST_NIGHT-windows.zip \
+            builds/android/the-first-night-debug.apk \
+            builds/SHA256SUMS.txt
+

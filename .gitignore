@@ -1,0 +1,31 @@
+# Godot generated state
+.godot/
+*.tmp
+*.bak
+*.translation
+
+# Export products
+builds/
+export/
+.tools/
+*.apk
+*.aab
+*.exe
+*.pck
+*.zip
+
+# Platform/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Android local signing/configuration
+android/
+*.keystore
+*.jks
+export_credentials.cfg
+
+# Local test and profiler output
+reports/local/
+*.log
