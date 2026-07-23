@@ -25,6 +25,7 @@ func _ready() -> void:
 	_generator.mix_rate = Tune.AMBIENT_SAMPLE_RATE
 	_generator.buffer_length = 0.5
 	_player = AudioStreamPlayer.new()
+	_player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	_player.stream = _generator
 	_player.volume_db = -11.0
 	add_child(_player)

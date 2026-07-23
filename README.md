@@ -21,6 +21,8 @@ continues fairly while the player is away and explains the result on return.
 
 ## Controls
 
+On the browser build, click the game canvas once to capture the mouse.
+
 | Action | Desktop |
 |---|---|
 | Move / look | WASD / mouse |

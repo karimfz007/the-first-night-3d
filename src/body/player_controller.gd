@@ -52,7 +52,7 @@ func _ready() -> void:
 	camera.fov = 72.0
 	add_child(camera)
 	_create_build_preview()
-	if not OS.has_feature("mobile"):
+	if not OS.has_feature("mobile") and not OS.has_feature("web"):
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 func _physics_process(delta: float) -> void:
@@ -66,6 +66,8 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and OS.has_feature("web") and not menu_open and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not menu_open:
 		_apply_look(event.relative * float(settings.get("look_sensitivity", Tune.LOOK_SENSITIVITY)))
 	if event is InputEventMouseButton and event.pressed and build_mode:
