@@ -5,6 +5,7 @@ Target: stable playable 30 FPS on the Director's Android device.
 ## Implemented budgets
 
 - Mobile renderer; Compatibility renderer for web.
+- ETC2/ASTC VRAM texture import enabled for the Android export path.
 - One shadow-casting directional light and at most one small dynamic fire light
   in the normal first-night path.
 - Primitive meshes/materials with no texture bandwidth.
