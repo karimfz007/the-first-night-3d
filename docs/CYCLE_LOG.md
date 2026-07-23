@@ -31,10 +31,14 @@ Godot 4.6.3 official build `7d41c59c4` passed 76 assertions including a
 playthrough, passed architecture/secret validation, completed a clean
 composition-root smoke, booted the complete main scene for 180 frames, and
 produced a rendered 1280×720 smoke capture through the Compatibility renderer.
+Hosted run
+[30047450638](https://github.com/karimfz007/the-first-night-3d/actions/runs/30047450638)
+reproduced those checks and exported Web, Windows, and Android packages from
+implementation SHA `6921215f4a6f14768f5b2f63f95cfe7a9232a24c`.
 
 ### Exceptions
 
-Remote repository, remote artifacts, Pages, branch protection, and physical
-Android profiling depend on external account/device state and cannot be claimed
-from source alone. They remain explicit acceptance evidence, not silently
-treated as complete.
+The fresh-context audit passes A1–A3 and A5–A11. A4 remains not verified because
+there is no physical/emulated Android runtime session; A12 therefore fails.
+Director-device FPS, input latency, memory, and thermal profiling remain
+unclaimed until captured on that device.

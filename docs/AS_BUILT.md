@@ -13,13 +13,15 @@ ownership can be judged before an art package hardens the visual direction.
 
 | Gate | Source evidence |
 |---|---|
-| A4–A5 | `main.tscn`, player controller, authored world, interactable resources |
+| A1–A3 | public repository, protected `main`, live Pages deployment, and hosted artifacts for audited SHA |
+| A4 | desktop/full-scene and touch-contract checks pass; Android runtime remains not verified |
+| A5 | `main.tscn`, player controller, authored world, interactable resources, and acceptance playthrough |
 | A6 | inventory, item/recipe data, crafting UI, save codec |
 | A7 | building definitions, preview validation, placed records, six piece types |
 | A8 | fire object, heat/fuel loop, shelter protection, HUD feedback |
 | A9–A10 | versioned save manager, reconciler, morning report, headless tests |
 | A11 | 76 passing assertions, 240-case property sweep, full-scene smoke, 18-check acceptance playthrough, and CI workflow |
-| A1–A3, A12 | require remote GitHub/device/auditor evidence in addition to source |
+| A12 | fails only because A4 has no physical/emulated Android runtime evidence |
 | A13 | dependency, architecture, pivot, limitation, performance, and as-built docs |
 
 ## Recommended next vertical slice

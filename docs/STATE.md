@@ -12,19 +12,22 @@ Engine pin: Godot 4.6.3 stable
 - Physical gathering, starter crafting, modular building, campfire/warmth,
   persistence, offline reconciliation, and morning report implemented.
 - Desktop and landscape touch control surfaces implemented.
-- Headless validation and tri-platform CI/export pipeline defined.
+- Headless validation and tri-platform CI/export pipeline operational.
 - Local Godot 4.6.3 evidence: 76/76 assertions, static validation pass, clean
-  full-scene smoke, 180-frame main-scene boot, and a real 1280×720 capture.
+  full-scene smoke, 18/18 live-scene acceptance checks, 180-frame main-scene
+  boot, and a real 1280×720 capture.
+- Public repository, protected `main`, Pages deployment, and immutable hosted
+  Windows/Android/checksum artifacts verified for implementation SHA
+  `6921215f4a6f14768f5b2f63f95cfe7a9232a24c`.
 
-## Pending external state
+## Remaining external evidence
 
-- GitHub repository creation, first remote CI run, Pages activation, branch
-  protection, and downloadable remote artifacts require the connected GitHub
-  account.
-- Android device performance needs an actual Director-device run; desktop/headless
-  validation cannot manufacture that evidence.
+- A4 Android runtime remains not verified because no APK was installed and
+  played on the Director's device or an emulator.
+- Android FPS, latency, memory, and thermal evidence needs an actual
+  Director-device run; desktop/headless validation cannot manufacture it.
 
 ## Canonical next work
 
-Resolve device/CI findings without expanding scope. Then pursue the recommended
-0.2 slice in `AS_BUILT.md`.
+Run the tagged APK on the Director's Android device and record the protocol in
+`PERFORMANCE.md`. Then pursue **0.2 — The Water Run** in `AS_BUILT.md`.

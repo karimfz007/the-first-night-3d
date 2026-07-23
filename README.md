@@ -12,12 +12,10 @@ continues fairly while the player is away and explains the result on return.
 
 ## Play and builds
 
-- Browser build: `https://karimfz007.github.io/the-first-night-3d/` (active after the
-  first successful `main` deployment)
-- Windows and Android debug builds: see
-  [Actions artifacts](https://github.com/karimfz007/the-first-night-3d/actions/workflows/ci.yml)
-- Versioned build history: see
-  [Releases](https://github.com/karimfz007/the-first-night-3d/releases)
+- [Play in the browser](https://karimfz007.github.io/the-first-night-3d/)
+- [Download Windows build](https://github.com/karimfz007/the-first-night-3d/releases/download/v0.1.0/THE_FIRST_NIGHT-windows.zip)
+- [Download Android APK](https://github.com/karimfz007/the-first-night-3d/releases/download/v0.1.0/the-first-night-debug.apk)
+- [CI history and immutable artifacts](https://github.com/karimfz007/the-first-night-3d/actions/workflows/ci.yml)
 
 ## Controls
 
@@ -58,10 +56,12 @@ Headless verification:
 godot --headless --path . --editor --quit-after 2
 godot --headless --path . --script tests/run_tests.gd
 godot --headless --path . --script tools/smoke_boot.gd
+godot --headless --path . --script tools/acceptance_playthrough.gd
 godot --headless --path . --script tools/static_validate.gd
 ```
 
 Exports are produced from the same commit by `.github/workflows/ci.yml`.
 See [Architecture](docs/ARCHITECTURE.md), [3D pivot](docs/3D_PIVOT.md),
 [known limitations](docs/KNOWN_LIMITATIONS.md), and
-[dependencies](DEPENDENCIES.md).
+[dependencies](DEPENDENCIES.md). The independent [acceptance
+audit](docs/AUDIT.md) records the one remaining physical-device evidence gap.

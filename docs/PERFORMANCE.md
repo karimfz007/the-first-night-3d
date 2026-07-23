@@ -25,6 +25,9 @@ GTX 1650 without runtime errors. These checks establish source/runtime health,
 not Android frame rate. No Android performance number is claimed without a
 device/profile capture.
 
+Hosted CI also exports a signed debug APK successfully. Export success is not
+substituted for on-device input, frame-time, memory, or thermal evidence.
+
 ## Device capture protocol
 
 Use a release-like debug APK with overlay enabled only for measurement. Walk

@@ -15,8 +15,7 @@
 - Placeholder audio is synthesized and intentionally sparse.
 - Browser persistence depends on the platform completing IndexedDB-backed user
   storage flushes; focus-loss and periodic saves reduce risk.
-- CI export configuration exists, but the first GitHub-hosted run is the proof
-  of Android SDK/export-template compatibility.
+- GitHub-hosted CI proves Android SDK/export-template compatibility and produces
+  a signed debug APK, but does not prove runtime behavior on Android hardware.
 - No measured Director-device FPS, thermal, memory, download-size, or input
   latency result exists until an APK is installed on that device.
-
