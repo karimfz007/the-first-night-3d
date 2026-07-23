@@ -106,6 +106,9 @@ func _update_movement(delta: float) -> void:
 	if touch_controls:
 		crouching = crouching or touch_controls.crouch_active
 		sprinting = sprinting or (input_vector.length() > 0.92 and not crouching and stamina > 0.0)
+	var capsule: CapsuleShape3D = collision.shape
+	if not crouching and capsule.height < Tune.STANDING_HEIGHT - 0.02 and not can_stand():
+		crouching = true
 	var speed := Tune.CROUCH_SPEED if crouching else (Tune.SPRINT_SPEED if sprinting else Tune.WALK_SPEED)
 	if sprinting:
 		stamina = maxf(0.0, stamina - Tune.STAMINA_DRAIN_PER_SECOND * delta)
@@ -113,7 +116,6 @@ func _update_movement(delta: float) -> void:
 		stamina = minf(Tune.STAMINA_MAX, stamina + Tune.STAMINA_RECOVER_PER_SECOND * delta)
 	var desired_height := Tune.CROUCH_HEIGHT if crouching else Tune.STANDING_HEIGHT
 	var desired_head := Tune.CROUCH_HEAD_HEIGHT if crouching else Tune.HEAD_HEIGHT
-	var capsule: CapsuleShape3D = collision.shape
 	capsule.height = move_toward(capsule.height, desired_height, Tune.CROUCH_LERP_SPEED * delta)
 	collision.position.y = capsule.height * 0.5
 	camera.position.y = move_toward(camera.position.y, desired_head, Tune.CROUCH_LERP_SPEED * delta)
@@ -183,7 +185,25 @@ func _update_interaction(delta: float) -> void:
 	if Input.is_action_just_pressed("primary_action") and active_target and active_target.has_method("strike") and _tool_cooldown <= 0.0:
 		_tool_cooldown = Tune.TOOL_STRIKE_COOLDOWN
 		var result: Dictionary = active_target.strike(game, self, game.is_tool_equipped(selected_hotbar))
-		game.notify_player(str(result.get("message", "")), "impact_wood" if active_target.item_id == "driftwood" else "impact_stone")
+		var cue := "confirm"
+		if active_target is ResourceNode:
+			cue = "impact_wood" if active_target.item_id == "driftwood" else "impact_stone"
+		game.notify_player(str(result.get("message", "")), cue)
+
+func can_stand() -> bool:
+	if collision == null or collision.shape == null or not is_inside_tree():
+		return true
+	var standing_shape := CapsuleShape3D.new()
+	standing_shape.radius = (collision.shape as CapsuleShape3D).radius
+	standing_shape.height = Tune.STANDING_HEIGHT
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = standing_shape
+	query.transform = Transform3D(global_basis, global_position + Vector3.UP * (Tune.STANDING_HEIGHT * 0.5 + 0.02))
+	query.collision_mask = collision_mask
+	query.exclude = [get_rid()]
+	query.collide_with_areas = false
+	query.collide_with_bodies = true
+	return get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
 
 func _complete_interaction(target: Node) -> void:
 	if not is_instance_valid(target):

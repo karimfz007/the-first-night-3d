@@ -5,6 +5,10 @@ const SAVE_PATH := "user://world.json"
 const BACKUP_PATH := "user://world.json.bak"
 const TEMP_PATH := "user://world.json.tmp"
 
+static func runtime_path() -> String:
+	var override := OS.get_environment("TFN_SAVE_PATH")
+	return override if not override.is_empty() else SAVE_PATH
+
 static func encode(state: Dictionary) -> String:
 	return JSON.stringify(WorldState.sanitized(state), "\t", false)
 

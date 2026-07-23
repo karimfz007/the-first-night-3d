@@ -82,7 +82,7 @@ func _notification(what: int) -> void:
 			get_tree().quit()
 
 func _load_state() -> void:
-	var loaded := SaveCodec.load_file()
+	var loaded := SaveCodec.load_file(SaveCodec.runtime_path())
 	if loaded.is_empty():
 		state = WorldState.new_game()
 	else:
@@ -488,7 +488,7 @@ func save_now(reason: String = "autosave") -> bool:
 		"objective_index": objective_index,
 		"last_save_unix": int(Time.get_unix_time_from_system())
 	}
-	var success := SaveCodec.save_file(state)
+	var success := SaveCodec.save_file(state, SaveCodec.runtime_path())
 	save_status = "Saved · %s" % reason if success else "SAVE FAILED"
 	_autosave_remaining = Tune.AUTOSAVE_SECONDS
 	if hud:

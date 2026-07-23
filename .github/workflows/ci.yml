@@ -83,6 +83,9 @@ jobs:
       - name: Full main-scene smoke test
         run: godot --headless --path . --script tools/smoke_boot.gd
 
+      - name: End-to-end vertical-slice acceptance playthrough
+        run: godot --headless --path . --script tools/acceptance_playthrough.gd
+
       - name: Static validation
         run: godot --headless --path . --script tools/static_validate.gd
 

@@ -27,7 +27,7 @@ On the browser build, click the game canvas once to capture the mouse.
 |---|---|
 | Move / look | WASD / mouse |
 | Sprint / crouch / jump | Shift / C / Space |
-| Interact / tool action | E / left mouse |
+| Interact / tool action / extinguish | E / left mouse |
 | Inventory / crafting | I or Tab / K |
 | Build mode | B |
 | Cycle piece / rotate | mouse wheel / Q and R |

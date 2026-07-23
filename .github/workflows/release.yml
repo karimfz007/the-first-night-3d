@@ -66,6 +66,7 @@ jobs:
           godot --headless --path . --import
           godot --headless --path . --script tests/run_tests.gd
           godot --headless --path . --script tools/smoke_boot.gd
+          godot --headless --path . --script tools/acceptance_playthrough.gd
           godot --headless --path . --script tools/static_validate.gd
           mkdir -p builds/windows builds/android
           godot --headless --path . --export-release "Windows" builds/windows/THE_FIRST_NIGHT.exe

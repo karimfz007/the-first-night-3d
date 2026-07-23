@@ -102,7 +102,7 @@ func _process(delta: float) -> void:
 
 func interaction_label(_player: Node) -> String:
 	if lit:
-		return "Add fuel · %s" % fuel_text()
+		return "Add fuel · Action extinguishes · %s" % fuel_text()
 	if fuel > 0.0:
 		return "Ignite campfire"
 	return "Add wood to campfire"
@@ -126,6 +126,13 @@ func interact(game: Node, _player: Node) -> Dictionary:
 		return {"ok": true, "message": "Fuel added · %s" % fuel_text()}
 	return {"ok": false, "message": "No wood available."}
 
+func strike(_game: Node, _player: Node, _tool_equipped: bool) -> Dictionary:
+	if not lit:
+		return {"ok": false, "message": "The campfire is already out."}
+	lit = false
+	_update_visual()
+	return {"ok": true, "message": "The flames are smothered; the remaining fuel is preserved."}
+
 func is_heating(point: Vector3) -> bool:
 	return lit and global_position.distance_to(point) <= Tune.FIRE_HEAT_RADIUS
 
@@ -148,4 +155,3 @@ func _update_visual() -> void:
 		_light.visible = lit
 	if _smoke:
 		_smoke.emitting = lit
-

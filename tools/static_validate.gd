@@ -10,6 +10,7 @@ func _run() -> void:
 	_require("export_presets.cfg")
 	_require("src/data/tune.gd")
 	_require("src/body/main.tscn")
+	_require("tools/acceptance_playthrough.gd")
 	_require("docs/3D_PIVOT.md")
 	_require("DEPENDENCIES.md")
 	_validate_save_schema()
