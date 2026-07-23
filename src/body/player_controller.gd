@@ -22,6 +22,7 @@ var menu_open := false
 var _tool_cooldown := 0.0
 var _bob_time := 0.0
 var _touch_look := Vector2.ZERO
+var _step_timer := 0.0
 
 func configure(game_node: Node, settings_value: Dictionary) -> PlayerController:
 	game = game_node
@@ -74,8 +75,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			_select_build_piece(BuildingDB.next_piece(build_piece_id, -1))
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode >= KEY_1 and event.physical_keycode <= KEY_6:
-			selected_hotbar = int(event.physical_keycode - KEY_1)
-			game.hud.set_hotbar_selection(selected_hotbar)
+			select_hotbar(int(event.physical_keycode - KEY_1))
 	if Input.is_action_just_pressed("cancel"):
 		if build_mode:
 			set_build_mode(false)
@@ -130,6 +130,10 @@ func _update_movement(delta: float) -> void:
 	_bob_time += delta * Vector2(velocity.x, velocity.z).length()
 	var bob := sin(_bob_time * Tune.BOB_FREQUENCY) * Tune.BOB_AMPLITUDE * float(settings.get("bob_intensity", Tune.DEFAULT_BOB_INTENSITY))
 	camera.position.y += bob if is_on_floor() and direction.length_squared() > 0.0 else 0.0
+	_step_timer -= delta
+	if is_on_floor() and direction.length_squared() > 0.0 and _step_timer <= 0.0:
+		_step_timer = Tune.FOOTSTEP_INTERVAL * (0.72 if sprinting else 1.0)
+		game.feedback.cue("step_sand")
 
 func _update_interaction(delta: float) -> void:
 	if menu_open or build_mode:
@@ -176,7 +180,7 @@ func _update_interaction(delta: float) -> void:
 		_cancel_hold("Interaction cancelled.")
 	if Input.is_action_just_pressed("primary_action") and active_target and active_target.has_method("strike") and _tool_cooldown <= 0.0:
 		_tool_cooldown = Tune.TOOL_STRIKE_COOLDOWN
-		var result: Dictionary = active_target.strike(game, self, game.inventory.count("stone_tool") > 0)
+		var result: Dictionary = active_target.strike(game, self, game.is_tool_equipped(selected_hotbar))
 		game.notify_player(str(result.get("message", "")), "impact_wood" if active_target.item_id == "driftwood" else "impact_stone")
 
 func _complete_interaction(target: Node) -> void:
@@ -240,6 +244,8 @@ func _update_build_preview() -> void:
 		game.hud.set_build_status(true, build_piece_id, false)
 		return
 	build_preview.visible = true
+	if Input.is_action_just_pressed("build_cycle"):
+		_select_build_piece(BuildingDB.next_piece(build_piece_id, 1))
 	if Input.is_action_just_pressed("rotate_left"):
 		build_rotation -= deg_to_rad(Tune.BUILD_ROTATION_STEP_DEGREES)
 	if Input.is_action_just_pressed("rotate_right"):
@@ -262,6 +268,11 @@ func set_menu_open(open: bool) -> void:
 	if not OS.has_feature("mobile"):
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if open else Input.MOUSE_MODE_CAPTURED
 
+func select_hotbar(index: int) -> void:
+	selected_hotbar = clampi(index, 0, Tune.HOTBAR_SLOTS - 1)
+	if game and game.hud:
+		game.hud.set_hotbar_selection(selected_hotbar)
+
 func apply_settings(new_settings: Dictionary) -> void:
 	settings.merge(new_settings, true)
 
@@ -271,4 +282,3 @@ func world_transform_data() -> Dictionary:
 		"rotation_y": rotation.y,
 		"settings": settings.duplicate(true)
 	}
-

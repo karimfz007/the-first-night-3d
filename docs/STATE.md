@@ -13,6 +13,8 @@ Engine pin: Godot 4.6.3 stable
   persistence, offline reconciliation, and morning report implemented.
 - Desktop and landscape touch control surfaces implemented.
 - Headless validation and tri-platform CI/export pipeline defined.
+- Local Godot 4.6.3 evidence: 69/69 assertions, static validation pass, clean
+  full-scene smoke, 180-frame main-scene boot, and a real 1280×720 capture.
 
 ## Pending external state
 
@@ -26,4 +28,3 @@ Engine pin: Godot 4.6.3 stable
 
 Resolve device/CI findings without expanding scope. Then pursue the recommended
 0.2 slice in `AS_BUILT.md`.
-

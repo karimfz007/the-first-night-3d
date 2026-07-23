@@ -46,6 +46,7 @@ func _ready() -> void:
 	touch_controls = TouchControls.new().configure(player.settings)
 	hud.root.add_child(touch_controls)
 	player.touch_controls = touch_controls
+	touch_controls.hotbar_selected.connect(player.select_hotbar)
 	_update_objective(true)
 	if not _morning_report.is_empty() and float(_morning_report.get("elapsed_real_seconds", 0.0)) >= Tune.OFFLINE_REPORT_MIN_SECONDS:
 		hud.call_deferred("show_morning_report", _morning_report)
@@ -165,6 +166,35 @@ func consume_wood_for_fire() -> bool:
 		if inventory.remove(item_id, 1):
 			return true
 	return false
+
+func is_tool_equipped(hotbar_index: int) -> bool:
+	if hotbar_index < 0 or hotbar_index >= inventory.slots.size():
+		return false
+	return str(inventory.slots[hotbar_index].get("item_id", "")) == "stone_tool"
+
+func split_selected_stack() -> void:
+	var index := player.selected_hotbar
+	if index < 0 or index >= inventory.slots.size():
+		notify_player("Select a filled hotbar slot first.", "fail")
+		return
+	var quantity := int(inventory.slots[index].get("quantity", 0))
+	if quantity < 2 or not inventory.split_slot(index, quantity / 2):
+		notify_player("That stack cannot be split.", "fail")
+		return
+	notify_player("Stack split.", "confirm")
+
+func drop_selected_item(quantity: int) -> void:
+	var index := player.selected_hotbar
+	if index < 0 or index >= inventory.slots.size():
+		notify_player("Select a filled hotbar slot first.", "fail")
+		return
+	var dropped := inventory.drop_slot(index, quantity)
+	if dropped.is_empty() or int(dropped.get("quantity", 0)) <= 0:
+		notify_player("Nothing dropped.", "fail")
+		return
+	var drop_position := player.global_position + -player.global_basis.z * 1.1
+	spawn_loose_item(str(dropped.item_id), int(dropped.quantity), drop_position)
+	notify_player("Dropped %s ×%d" % [ItemDB.display_name(str(dropped.item_id)), int(dropped.quantity)], "confirm")
 
 func get_build_preview(piece_id: String, hit_position: Vector3, normal: Vector3, rotation_y: float, player_position: Vector3) -> Dictionary:
 	var definition := BuildingDB.get_piece(piece_id)

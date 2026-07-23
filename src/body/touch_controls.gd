@@ -1,6 +1,8 @@
 class_name TouchControls
 extends Control
 
+signal hotbar_selected(index: int)
+
 var move_vector := Vector2.ZERO
 var crouch_active := false
 var _look_accumulator := Vector2.ZERO
@@ -102,12 +104,27 @@ func _create_buttons() -> void:
 	crouch_button.toggle_mode = true
 	var top_row := HBoxContainer.new()
 	top_row.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	top_row.position = Vector2(-350, 18)
+	top_row.position = Vector2(-690, 18)
 	top_row.add_theme_constant_override("separation", 8)
 	add_child(top_row)
 	_add_action_button(top_row, "PACK", "inventory")
 	_add_action_button(top_row, "CRAFT", "crafting")
 	_add_action_button(top_row, "BUILD", "build_mode")
+	_add_action_button(top_row, "PIECE", "build_cycle")
+	_add_action_button(top_row, "↶", "rotate_left")
+	_add_action_button(top_row, "↷", "rotate_right")
+	var hotbar_row := HBoxContainer.new()
+	hotbar_row.name = "Touch Hotbar"
+	hotbar_row.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	hotbar_row.position = Vector2(-192, -128)
+	hotbar_row.add_theme_constant_override("separation", 4)
+	add_child(hotbar_row)
+	for index in range(Tune.HOTBAR_SLOTS):
+		var hotbar_button := Button.new()
+		hotbar_button.text = str(index + 1)
+		hotbar_button.custom_minimum_size = Vector2(56, 42) * _scale_value
+		hotbar_button.pressed.connect(_select_hotbar.bind(index))
+		hotbar_row.add_child(hotbar_button)
 
 func _add_action_button(parent: Control, title: String, action: String) -> Button:
 	var button := Button.new()
@@ -118,3 +135,6 @@ func _add_action_button(parent: Control, title: String, action: String) -> Butto
 	button.button_up.connect(func(): Input.action_release(action))
 	parent.add_child(button)
 	return button
+
+func _select_hotbar(index: int) -> void:
+	hotbar_selected.emit(index)

@@ -3,6 +3,7 @@
 *.tmp
 *.bak
 *.translation
+*.import
 
 # Export products
 builds/

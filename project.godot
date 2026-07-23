@@ -89,6 +89,10 @@ build_mode={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"physical_keycode":66)]
 }
+build_cycle={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":84)]
+}
 rotate_left={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"physical_keycode":81)]

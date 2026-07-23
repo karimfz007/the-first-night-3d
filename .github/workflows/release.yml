@@ -45,12 +45,11 @@ jobs:
             -dname "CN=Android Debug,O=Android,C=US"
 
       - name: Verify and export same tag
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
         run: |
           set -euo pipefail
           godot --headless --path . --import
           godot --headless --path . --script tests/run_tests.gd
+          godot --headless --path . --script tools/smoke_boot.gd
           godot --headless --path . --script tools/static_validate.gd
           mkdir -p builds/windows builds/android
           godot --headless --path . --export-release "Windows" builds/windows/THE_FIRST_NIGHT.exe
@@ -68,4 +67,3 @@ jobs:
             builds/THE_FIRST_NIGHT-windows.zip \
             builds/android/the-first-night-debug.apk \
             builds/SHA256SUMS.txt
-

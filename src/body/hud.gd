@@ -194,6 +194,21 @@ func _create_inventory() -> void:
 	inventory_text.fit_content = false
 	inventory_text.custom_minimum_size = Vector2(300, 380)
 	inventory_column.add_child(inventory_text)
+	var item_actions := HBoxContainer.new()
+	inventory_column.add_child(item_actions)
+	var split_button := Button.new()
+	split_button.text = "SPLIT"
+	split_button.tooltip_text = "Split the selected hotbar stack in half"
+	split_button.pressed.connect(func(): game.split_selected_stack())
+	item_actions.add_child(split_button)
+	var drop_one_button := Button.new()
+	drop_one_button.text = "DROP ONE"
+	drop_one_button.pressed.connect(func(): game.drop_selected_item(1))
+	item_actions.add_child(drop_one_button)
+	var drop_stack_button := Button.new()
+	drop_stack_button.text = "DROP STACK"
+	drop_stack_button.pressed.connect(func(): game.drop_selected_item(-1))
+	item_actions.add_child(drop_stack_button)
 	var settings_column := VBoxContainer.new()
 	settings_column.custom_minimum_size.x = 290
 	columns.add_child(settings_column)
@@ -371,9 +386,12 @@ func show_morning_report(report: Dictionary) -> void:
 	var body := Label.new()
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.custom_minimum_size.y = 230
-	body.text = "Away: %s\nWorld advanced: %s\nFire burned: %s\nFire went out: %s\nWarmth: %.1f → %.1f (%+.1f)\n\n%s" % [
-		_duration(elapsed), _duration(advanced), _duration(fire_duration),
+	var requested_elapsed := float(report.get("requested_elapsed_seconds", elapsed))
+	var cap_note := " (fairness cap applied)" if requested_elapsed > elapsed else ""
+	body.text = "Away: %s\nConsequences reconciled: %s%s\nWorld advanced: %s\nFire burned: %s\nFire went out: %s\nShelter protected you: %s\nWarmth: %.1f → %.1f (%+.1f)\n\n%s" % [
+		_duration(requested_elapsed), _duration(elapsed), cap_note, _duration(advanced), _duration(fire_duration),
 		"yes" if bool(report.get("fire_went_out", false)) else "no",
+		"yes" if bool(report.get("sheltered", false)) else "no",
 		float(report.get("warmth_before", 0.0)), float(report.get("warmth_after", 0.0)),
 		float(report.get("warmth_change", 0.0)), str(report.get("cause", ""))
 	]
@@ -400,4 +418,3 @@ func _duration(seconds: float) -> String:
 	if total >= 60:
 		return "%dm %02ds" % [total / 60, total % 60]
 	return "%ds" % total
-

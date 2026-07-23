@@ -94,25 +94,8 @@ func _create_authored_landmarks() -> void:
 		add_child(marker)
 
 func _create_resources(saved: Dictionary) -> void:
-	var definitions := [
-		["loose_wood_01", "loose", "driftwood", 2, Vector3(-3, 0.18, 13), Vector3(0, 20, 0)],
-		["loose_wood_02", "loose", "driftwood", 2, Vector3(3, 0.18, 10), Vector3(0, -35, 0)],
-		["loose_wood_03", "loose", "driftwood", 2, Vector3(-9, 0.18, 7), Vector3(0, 55, 0)],
-		["loose_wood_04", "loose", "driftwood", 2, Vector3(12, 0.18, 6), Vector3(0, 10, 0)],
-		["stone_01", "loose", "stone", 2, Vector3(-1, 0.2, 18), Vector3.ZERO],
-		["stone_02", "loose", "stone", 2, Vector3(6, 0.2, 15), Vector3.ZERO],
-		["stone_03", "loose", "stone", 2, Vector3(-8, 0.2, 18), Vector3.ZERO],
-		["fiber_01", "fiber", "plant_fiber", 4, Vector3(2, 0.25, 25), Vector3.ZERO],
-		["fiber_02", "fiber", "plant_fiber", 4, Vector3(10, 0.25, 27), Vector3.ZERO],
-		["deadfall_01", "deadfall", "deadfall", 5, Vector3(-15, 0.3, 21), Vector3(0, 22, 0)],
-		["tree_node_01", "tree", "driftwood", 24, Vector3(18, 0, 31), Vector3.ZERO],
-		["tree_node_02", "tree", "driftwood", 24, Vector3(-18, 0, 34), Vector3.ZERO],
-		["rock_node_01", "rock", "stone", 20, Vector3(25, 0.8, 22), Vector3(0, 18, 0)],
-		["rock_node_02", "rock", "stone", 20, Vector3(-31, 0.8, 20), Vector3(0, -12, 0)]
-	]
-	for raw: Array in definitions:
+	for raw: Array in WorldSliceDB.RESOURCES:
 		var amount := int(saved.get(str(raw[0]), raw[3]))
 		var node := ResourceNode.new().configure(str(raw[0]), str(raw[1]), str(raw[2]), amount, raw[4], raw[5])
 		add_child(node)
 		game.register_resource(node)
-

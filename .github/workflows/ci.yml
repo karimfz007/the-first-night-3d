@@ -64,6 +64,9 @@ jobs:
       - name: Automated brain and integration tests
         run: godot --headless --path . --script tests/run_tests.gd
 
+      - name: Full main-scene smoke test
+        run: godot --headless --path . --script tools/smoke_boot.gd
+
       - name: Static validation
         run: godot --headless --path . --script tools/static_validate.gd
 
@@ -80,8 +83,6 @@ jobs:
           zip -9 ../THE_FIRST_NIGHT-windows.zip THE_FIRST_NIGHT.exe
 
       - name: Export Android debug APK
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
         run: |
           mkdir -p builds/android
           godot --headless --path . --export-debug "Android" builds/android/the-first-night-debug.apk
@@ -137,4 +138,3 @@ jobs:
       - name: Deploy browser build
         id: deployment
         uses: actions/deploy-pages@v4
-

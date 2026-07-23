@@ -71,6 +71,7 @@ const MAX_INVENTORY_SLOTS := 20
 const HOTBAR_SLOTS := 6
 const NOTIFICATION_SECONDS := 2.8
 const HINT_IDLE_SECONDS := 24.0
+const FOOTSTEP_INTERVAL := 0.48
 
 # Building.
 const BUILD_RANGE := 6.0
@@ -104,6 +105,7 @@ const TOUCH_MAX_SCALE := 1.4
 const UI_SCALE_MIN := 0.8
 const UI_SCALE_MAX := 1.35
 const DEFAULT_AUDIO_VOLUME := 0.82
+const AMBIENT_SAMPLE_RATE := 22050.0
 
 # Crafting.
 const CRAFT_TICK_SECONDS := 0.1
@@ -128,4 +130,3 @@ static func snapped(value: Vector3) -> Vector3:
 		snappedf(value.y, BUILD_GRID),
 		snappedf(value.z, BUILD_GRID)
 	)
-

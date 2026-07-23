@@ -14,6 +14,9 @@ func _run() -> void:
 	_test_absence_durations()
 	_test_fire_fuel_exhaustion()
 	_test_warmth_bounds_and_floor()
+	_test_offline_spatial_fairness()
+	_test_offline_report_cap_and_shelter()
+	_test_slice_resource_budget()
 	_test_inventory_serialization()
 	_test_crafting_input_output_and_cancel()
 	_test_building_serialization()
@@ -22,7 +25,9 @@ func _run() -> void:
 	_test_stable_ids()
 	_test_no_negative_resources()
 	_test_no_nan_or_infinite()
+	_test_property_sweep()
 	_test_main_scene_contract()
+	_test_body_interaction_contracts()
 	_test_save_file_round_trip()
 	print("\nRESULT: %d passed, %d failed" % [passed, failed])
 	for failure in failures:
@@ -68,6 +73,46 @@ func _test_warmth_bounds_and_floor() -> void:
 	hot.fires = [{"save_id": "fire_1", "fuel": Tune.FIRE_FUEL_MAX, "lit": true}]
 	var hot_result := Reconciler.reconcile(hot, 1.0)
 	_expect_true(hot_result.state.warmth <= Tune.WARMTH_MAX, "warmth is upper bounded")
+
+func _test_offline_spatial_fairness() -> void:
+	var near := WorldState.new_game(100)
+	near.player.position = [0.0, 2.0, 0.0]
+	near.fires = [{"save_id": "fire_1", "fuel": Tune.FIRE_FUEL_MAX, "lit": true, "position": [1.0, 0.0, 0.0]}]
+	var near_result := Reconciler.reconcile(near, 30.0)
+	var far := near.duplicate(true)
+	far.fires[0].position = [40.0, 0.0, 0.0]
+	var far_result := Reconciler.reconcile(far, 30.0)
+	_expect_true(near_result.report.fire_heat_seconds > 0.0, "nearby offline fire provides heat")
+	_expect_equal(far_result.report.fire_heat_seconds, 0.0, "distant offline fire provides no fake heat")
+	_expect_true(near_result.state.warmth >= far_result.state.warmth, "spatial fire warmth is causally bounded")
+
+func _test_offline_report_cap_and_shelter() -> void:
+	var state_value := WorldState.new_game(100)
+	state_value.player.position = [0.0, 1.0, 0.0]
+	var ids := StableIds.new()
+	for piece_id in ["foundation", "wall", "wall", "doorway", "roof"]:
+		state_value.buildings.append(BuildRecord.create(ids.next_id("build"), piece_id, Tune.OWNER_ID, Transform3D(Basis.IDENTITY, Vector3.ZERO)))
+	var requested := Tune.OFFLINE_MAX_REAL_SECONDS + 7200.0
+	var result := Reconciler.reconcile(state_value, requested)
+	_expect_equal(result.report.requested_elapsed_seconds, requested, "morning report preserves actual time absent")
+	_expect_equal(result.report.elapsed_real_seconds, Tune.OFFLINE_MAX_REAL_SECONDS, "offline consequences use configured fairness cap")
+	_expect_true(result.report.sheltered, "offline report detects completed shelter")
+	_expect_true("shelter reduced exposure" in str(result.report.cause).to_lower(), "offline explanation names shelter protection")
+
+func _test_slice_resource_budget() -> void:
+	var required := {"driftwood": 0, "stone": 0, "plant_fiber": 0}
+	for recipe_id in ["primitive_stone_tool", "building_plan", "campfire"]:
+		var recipe := RecipeDB.get_recipe(recipe_id)
+		for item_id: String in recipe.ingredients:
+			if required.has(item_id):
+				required[item_id] += int(recipe.ingredients[item_id])
+	for piece_id in ["foundation", "wall", "wall", "doorway", "door", "roof"]:
+		var piece := BuildingDB.get_piece(piece_id)
+		for item_id: String in piece.cost:
+			if required.has(item_id):
+				required[item_id] += int(piece.cost[item_id])
+	for item_id: String in required:
+		_expect_true(WorldSliceDB.total_item(item_id) >= int(required[item_id]), "authored slice contains enough %s for tool, fire, and functional shelter" % item_id)
 
 func _test_inventory_serialization() -> void:
 	var inventory := Inventory.new(4)
@@ -145,6 +190,34 @@ func _test_no_nan_or_infinite() -> void:
 		var result := Reconciler.reconcile(invalid, sample)
 		_expect_true(not is_nan(result.state.warmth) and not is_inf(result.state.warmth), "reconciliation stays finite")
 
+func _test_property_sweep() -> void:
+	var all_valid := true
+	for index in range(240):
+		var initial := WorldState.new_game(100)
+		initial.warmth = float((index * 37) % 140) - 20.0
+		initial.world_seconds = float((index * 7919) % int(Tune.WORLD_DAY_SECONDS))
+		initial.player.position = [float(index % 11), 2.0, float(index % 7)]
+		initial.fires = [{
+			"save_id": "fire_property",
+			"fuel": float((index * 53) % int(Tune.FIRE_FUEL_MAX + 200.0)) - 100.0,
+			"lit": index % 3 != 0,
+			"position": [float(index % 13), 0.0, float(index % 5)]
+		}]
+		var elapsed := float(index * index * 17)
+		var first := Reconciler.reconcile(initial, elapsed)
+		var second := Reconciler.reconcile(initial, elapsed)
+		var state_value: Dictionary = first.state
+		all_valid = all_valid \
+			and JSON.stringify(first) == JSON.stringify(second) \
+			and float(state_value.warmth) >= Tune.WARMTH_MIN \
+			and float(state_value.warmth) <= Tune.WARMTH_MAX \
+			and float(state_value.fires[0].fuel) >= 0.0 \
+			and not is_nan(float(state_value.world_seconds)) \
+			and not is_inf(float(state_value.world_seconds))
+		if not all_valid:
+			break
+	_expect_true(all_valid, "240-case deterministic property sweep preserves bounds and finiteness")
+
 func _test_main_scene_contract() -> void:
 	var scene := load("res://src/body/main.tscn") as PackedScene
 	_expect_true(scene != null, "main scene loads")
@@ -154,6 +227,39 @@ func _test_main_scene_contract() -> void:
 		_expect_true(instance.get_script() != null, "main scene has a valid game script")
 		_expect_true(instance.get_script().can_instantiate(), "main game script compiles")
 		instance.free()
+
+func _test_body_interaction_contracts() -> void:
+	var ids := StableIds.new()
+	var doorway_record := BuildRecord.create(ids.next_id("build"), "doorway", Tune.OWNER_ID, Transform3D.IDENTITY)
+	var doorway := BuildPiece.new().configure(doorway_record)
+	doorway._ready()
+	var doorway_collisions := doorway.find_children("*", "CollisionShape3D", true, false)
+	_expect_equal(doorway_collisions.size(), 3, "doorway collision preserves a walkable opening")
+	doorway.free()
+	var door_record := BuildRecord.create(ids.next_id("build"), "door", Tune.OWNER_ID, Transform3D.IDENTITY)
+	var door := BuildPiece.new().configure(door_record)
+	door._ready()
+	var opened := door.interact(null, null)
+	_expect_true(opened.ok and bool(door.record.get("door_open", false)), "simple door opens physically")
+	var closed := door.interact(null, null)
+	_expect_true(closed.ok and not bool(door.record.get("door_open", true)), "simple door closes physically")
+	door.free()
+	var game := GameRoot.new()
+	game.inventory = Inventory.new()
+	game.inventory.add("driftwood", 2)
+	game.inventory.add("stone_tool", 1)
+	_expect_true(not game.is_tool_equipped(0), "tool effectiveness ignores an unequipped inventory tool")
+	_expect_true(game.is_tool_equipped(1), "selected hotbar tool governs harvesting")
+	game.free()
+	var touch := TouchControls.new()
+	touch._ready()
+	var button_texts: Array[String] = []
+	for button: Button in touch.find_children("*", "Button", true, false):
+		button_texts.append(button.text)
+	_expect_true("PIECE" in button_texts and "↶" in button_texts and "↷" in button_texts, "touch UI exposes build cycle and both rotations")
+	for number in ["1", "2", "3", "4", "5", "6"]:
+		_expect_true(number in button_texts, "touch hotbar exposes slot %s" % number)
+	touch.free()
 
 func _test_save_file_round_trip() -> void:
 	var path := "user://test_world_round_trip.json"

@@ -55,6 +55,7 @@ Headless verification:
 ```sh
 godot --headless --path . --editor --quit-after 2
 godot --headless --path . --script tests/run_tests.gd
+godot --headless --path . --script tools/smoke_boot.gd
 godot --headless --path . --script tools/static_validate.gd
 ```
 

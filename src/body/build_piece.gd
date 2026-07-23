@@ -20,7 +20,10 @@ func _ready() -> void:
 	var definition := BuildingDB.get_piece(piece_id)
 	var size: Vector3 = definition.get("size", Vector3.ONE)
 	_make_visual(size)
-	PrototypeFactory.add_collision(self, size)
+	if piece_id == "doorway":
+		_add_doorway_collision(size)
+	else:
+		PrototypeFactory.add_collision(self, size)
 
 func _make_visual(size: Vector3) -> void:
 	var wood := Color(0.34, 0.20, 0.09)
@@ -53,16 +56,35 @@ func _make_visual(size: Vector3) -> void:
 				for x in [-1.5, -0.5, 0.5, 1.5]:
 					PrototypeFactory.visual_box(self, "Wall Bind", Vector3(x, 0.0, -size.z * 0.58), Vector3(0.08, size.y, 0.07), Color(0.48, 0.34, 0.15))
 
+func _add_doorway_collision(size: Vector3) -> void:
+	_add_collision_box(Vector3(-1.42, 0.0, 0.0), Vector3(1.15, size.y, size.z))
+	_add_collision_box(Vector3(1.42, 0.0, 0.0), Vector3(1.15, size.y, size.z))
+	_add_collision_box(Vector3(0.0, 1.1, 0.0), Vector3(1.7, 0.48, size.z))
+
+func _add_collision_box(position_value: Vector3, size: Vector3) -> void:
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	collision.shape = shape
+	collision.position = position_value
+	add_child(collision)
+
 func interaction_label(_player: Node) -> String:
+	if piece_id == "door":
+		return "Close simple door" if bool(record.get("door_open", false)) else "Open simple door"
 	return "%s · %d%%" % [BuildingDB.get_piece(piece_id).get("name", piece_id), roundi(float(record.get("health", 0.0)))]
 
 func interaction_hold_duration() -> float:
 	return 0.0
 
 func interact(_game: Node, _player: Node) -> Dictionary:
+	if piece_id == "door":
+		var opening := not bool(record.get("door_open", false))
+		record["door_open"] = opening
+		rotate_y(deg_to_rad(90.0 if opening else -90.0))
+		return {"ok": true, "message": "Door opened." if opening else "Door closed."}
 	return {"ok": true, "message": "Owned by you · repair and demolish hooks ready"}
 
 func to_record() -> Dictionary:
 	record["transform"] = BuildRecord.create(save_id, piece_id, str(record.get("owner_id", Tune.OWNER_ID)), transform, str(record.get("parent_id", ""))).transform
 	return record.duplicate(true)
-
