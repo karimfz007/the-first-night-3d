@@ -13,13 +13,16 @@ continues fairly while the player is away and explains the result on return.
 ## Play and builds
 
 - [Play in the browser](https://karimfz007.github.io/the-first-night-3d/)
-- [Download Windows build](https://github.com/karimfz007/the-first-night-3d/releases/download/v0.1.0/THE_FIRST_NIGHT-windows.zip)
-- [Download Android APK](https://github.com/karimfz007/the-first-night-3d/releases/download/v0.1.0/the-first-night-debug.apk)
+- [Download Windows build](https://github.com/karimfz007/the-first-night-3d/releases/download/v0.1.1/THE_FIRST_NIGHT-windows.zip)
+- [Download Android APK](https://github.com/karimfz007/the-first-night-3d/releases/download/v0.1.1/the-first-night-debug.apk)
 - [CI history and immutable artifacts](https://github.com/karimfz007/the-first-night-3d/actions/workflows/ci.yml)
 
 ## Controls
 
-On the browser build, click the game canvas once to capture the mouse.
+On the browser build, click the game canvas once to capture the mouse. Escape
+releases it. The persistent top-right Settings button exposes sensitivity,
+invert, audio, camera motion, mobile layout/scale/opacity, fullscreen, reset,
+and a compact controls reference.
 
 | Action | Desktop |
 |---|---|
@@ -32,9 +35,10 @@ On the browser build, click the game canvas once to capture the mouse.
 | Place / cancel | left mouse / right mouse or Escape |
 | Save / debug overlay | F5 / F3 |
 
-Android presents scalable dual-stick movement/look controls with interact,
-action, jump, crouch, hotbar, inventory, and build buttons. Control sides and
-scale are adjustable in Settings.
+Android and touch-capable browsers present a visible movement stick, labelled
+look region, interact/action/jump/crouch buttons, and a touch hotbar. Selecting
+a fire kit immediately opens its Place/Cancel/Rotate surface. Control side,
+scale, and opacity are adjustable in Settings.
 
 ## Development
 
@@ -58,6 +62,8 @@ godot --headless --path . --script tests/run_tests.gd
 godot --headless --path . --script tools/smoke_boot.gd
 godot --headless --path . --script tools/acceptance_playthrough.gd
 godot --headless --path . --script tools/static_validate.gd
+npm ci
+npm run test:browser
 ```
 
 Exports are produced from the same commit by `.github/workflows/ci.yml`.

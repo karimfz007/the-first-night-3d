@@ -1,0 +1,13 @@
+{
+  "name": "the-first-night-browser-verification",
+  "private": true,
+  "version": "0.1.1",
+  "type": "module",
+  "scripts": {
+    "postinstall": "node tests/browser/mark-node-modules-ignored.mjs",
+    "test:browser": "playwright test --config=playwright.config.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1"
+  }
+}

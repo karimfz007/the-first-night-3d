@@ -1,5 +1,43 @@
 # Cycle log
 
+## 2026-07-24 — blocking Web UX and control repair
+
+### Intent
+
+Correct the six defects observed in the Director's first Pages playtest before
+resuming Android performance sign-off.
+
+### Delivered
+
+- A zero-margin, dynamic-viewport, safe-area-aware Web shell and expanding
+  Godot stretch policy eliminate the fixed 16:9 internal letterbox.
+- A persistent top-right Settings surface, compact controls/help overlay,
+  fullscreen action, persistent control tuning, and modal input suppression.
+- Explicit desktop click-to-control ownership, Escape release, focus prompt,
+  modal release, and stuck-input cleanup.
+- Visible, touch-capable controls with a bounded movement stick, dedicated look
+  half, larger action/hotbar targets, mirrored layout, scale/opacity settings,
+  and multitouch arbitration.
+- Selecting a fire kit immediately enters campfire placement with a translucent
+  preview, reasoned validity feedback, contextual instructions, mobile
+  Place/Cancel/Rotate controls, exact-once consumption, persistence, and
+  confirmation.
+- A locked Playwright harness plus six committed screenshots under
+  `docs/evidence/web-control-repair`.
+
+### Verification
+
+Local pinned-engine verification reports 77/77 deterministic/control
+assertions, the 240-case sweep, 19/19 live-scene acceptance checks, clean
+full-scene smoke/static validation, passing desktop Chromium checks, passing
+Android-landscape multitouch checks, and a passing touch fire
+select/cancel/preview/place/ignite route.
+
+### Exception
+
+Chromium touch emulation closes the blocking Web acceptance scope but does not
+replace APK runtime or Director-device performance evidence.
+
 ## 2026-07-23 — DRIFT vertical slice 0.1
 
 ### Intent

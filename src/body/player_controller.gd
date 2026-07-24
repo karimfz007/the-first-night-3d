@@ -23,6 +23,9 @@ var _tool_cooldown := 0.0
 var _bob_time := 0.0
 var _touch_look := Vector2.ZERO
 var _step_timer := 0.0
+var _capture_guard_frames := 0
+var _campfire_hint_seen := false
+var _last_focus_owned := false
 
 func configure(game_node: Node, settings_value: Dictionary) -> PlayerController:
 	game = game_node
@@ -52,12 +55,20 @@ func _ready() -> void:
 	camera.fov = 72.0
 	add_child(camera)
 	_create_build_preview()
-	if not OS.has_feature("mobile") and not OS.has_feature("web"):
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if not _uses_touch_controls():
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	call_deferred("_publish_control_state")
 
 func _physics_process(delta: float) -> void:
 	if game == null:
 		return
+	_capture_guard_frames = maxi(0, _capture_guard_frames - 1)
+	if Input.is_action_just_pressed("cancel") and build_mode:
+		set_build_mode(false)
+	var focus_owned := _owns_control_focus()
+	if focus_owned != _last_focus_owned:
+		_last_focus_owned = focus_owned
+		_publish_control_state()
 	_tool_cooldown = maxf(0.0, _tool_cooldown - delta)
 	_update_look()
 	_update_movement(delta)
@@ -66,8 +77,12 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and OS.has_feature("web") and not menu_open and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and not _uses_touch_controls() and not menu_open and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		_capture_guard_frames = 2
+		_publish_control_state()
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not menu_open:
 		_apply_look(event.relative * float(settings.get("look_sensitivity", Tune.LOOK_SENSITIVITY)))
 	if event is InputEventMouseButton and event.pressed and build_mode:
@@ -75,17 +90,25 @@ func _unhandled_input(event: InputEvent) -> void:
 			_select_build_piece(BuildingDB.next_piece(build_piece_id, 1))
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			_select_build_piece(BuildingDB.next_piece(build_piece_id, -1))
-	if event is InputEventKey and event.pressed and not event.echo:
+	if event is InputEventKey and event.pressed and not event.echo and _owns_control_focus():
 		if event.physical_keycode >= KEY_1 and event.physical_keycode <= KEY_6:
 			select_hotbar(int(event.physical_keycode - KEY_1))
 	if Input.is_action_just_pressed("cancel"):
 		if build_mode:
 			set_build_mode(false)
-		elif not OS.has_feature("mobile"):
-			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED else Input.MOUSE_MODE_CAPTURED
+		elif not _uses_touch_controls() and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+			_publish_control_state()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_release_runtime_input()
+		if not _uses_touch_controls():
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		_publish_control_state()
 
 func _update_look() -> void:
-	if touch_controls and not menu_open:
+	if touch_controls and touch_controls.visible and not menu_open:
 		var delta_look := touch_controls.consume_look()
 		if delta_look.length_squared() > 0.0:
 			_apply_look(delta_look * float(settings.get("touch_sensitivity", Tune.TOUCH_SENSITIVITY)))
@@ -97,13 +120,13 @@ func _apply_look(delta_look: Vector2) -> void:
 
 func _update_movement(delta: float) -> void:
 	var input_vector := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	if touch_controls and touch_controls.move_vector.length() > input_vector.length():
+	if touch_controls and touch_controls.visible and touch_controls.move_vector.length() > input_vector.length():
 		input_vector = touch_controls.move_vector
-	if menu_open:
+	if menu_open or not _owns_control_focus():
 		input_vector = Vector2.ZERO
 	var crouching := Input.is_action_pressed("crouch")
 	var sprinting := Input.is_action_pressed("sprint") and not crouching and input_vector.y < -0.1 and stamina > 0.0
-	if touch_controls:
+	if touch_controls and touch_controls.visible:
 		crouching = crouching or touch_controls.crouch_active
 		sprinting = sprinting or (input_vector.length() > 0.92 and not crouching and stamina > 0.0)
 	var capsule: CapsuleShape3D = collision.shape
@@ -140,7 +163,7 @@ func _update_movement(delta: float) -> void:
 		game.feedback.cue("step_sand")
 
 func _update_interaction(delta: float) -> void:
-	if menu_open or build_mode:
+	if menu_open or build_mode or not _owns_control_focus():
 		active_target = null
 		hold_target = null
 		hold_progress = 0.0
@@ -228,11 +251,36 @@ func set_build_mode(enabled: bool) -> void:
 	if enabled and game.inventory.count("building_plan") <= 0 and game.inventory.count("campfire_kit") <= 0:
 		game.notify_player("Craft a building plan or campfire kit first.", "fail")
 		return
+	if enabled:
+		var selected_item := selected_item_id()
+		if selected_item == "campfire_kit":
+			build_piece_id = "campfire"
+		elif selected_item == "building_plan" and build_piece_id == "campfire":
+			build_piece_id = "foundation"
 	build_mode = enabled
 	build_preview.visible = enabled
+	_refresh_preview_mesh()
 	game.hud.set_build_status(enabled, build_piece_id, false)
+	if touch_controls:
+		touch_controls.set_placement_mode(enabled)
 	if enabled:
-		game.notify_player("Build mode · wheel cycles pieces · Q/R rotate", "confirm")
+		var instruction := "Aim at clear ground and confirm placement." if build_piece_id == "campfire" else "Aim at clear ground · confirm to place · Q/R rotate."
+		if build_piece_id != "campfire" or not _campfire_hint_seen:
+			game.notify_player(instruction, "confirm")
+		if build_piece_id == "campfire":
+			_campfire_hint_seen = true
+	else:
+		build_parent_id = ""
+	WebRuntimeBridge.publish({
+		"placementMode": build_mode,
+		"placementPiece": build_piece_id if build_mode else "",
+		"placementHint": "Aim at clear ground and confirm placement." if build_mode else ""
+	})
+
+func begin_piece_placement(piece_id: String) -> void:
+	build_piece_id = piece_id
+	build_rotation = 0.0
+	set_build_mode(true)
 
 func _select_build_piece(piece: String) -> void:
 	build_piece_id = piece
@@ -251,19 +299,29 @@ func _refresh_preview_mesh() -> void:
 	if build_preview == null:
 		return
 	var definition := BuildingDB.get_piece(build_piece_id)
-	var mesh := BoxMesh.new()
-	mesh.size = definition.get("size", Vector3.ONE)
+	var mesh: PrimitiveMesh
+	if build_piece_id == "campfire":
+		var cylinder := CylinderMesh.new()
+		cylinder.top_radius = 0.62
+		cylinder.bottom_radius = 0.72
+		cylinder.height = 0.28
+		mesh = cylinder
+	else:
+		var box := BoxMesh.new()
+		box.size = definition.get("size", Vector3.ONE)
+		mesh = box
 	mesh.material = PrototypeFactory.material(Tune.BUILD_INVALID_COLOR)
 	build_preview.mesh = mesh
 
 func _update_build_preview() -> void:
 	if not build_mode or build_preview == null:
 		return
-	var hit := _raycast(Tune.BUILD_RANGE, 1)
+	var hit := _raycast(Tune.BUILD_RANGE * 1.8, 1)
 	if hit.is_empty():
 		build_valid = false
 		build_preview.visible = false
-		game.hud.set_build_status(true, build_piece_id, false)
+		game.hud.set_build_status(true, build_piece_id, false, "Aim at ground within range")
+		WebRuntimeBridge.publish({"placementValid": false, "placementReason": "Aim at ground within range"})
 		return
 	build_preview.visible = true
 	if Input.is_action_just_pressed("build_cycle"):
@@ -279,24 +337,70 @@ func _update_build_preview() -> void:
 	var material_override: StandardMaterial3D = build_preview.mesh.material
 	material_override.albedo_color = Tune.BUILD_VALID_COLOR if build_valid else Tune.BUILD_INVALID_COLOR
 	game.hud.set_build_status(true, build_piece_id, build_valid, str(result.get("reason", "")))
-	if Input.is_action_just_pressed("primary_action"):
+	WebRuntimeBridge.publish({"placementValid": build_valid, "placementReason": str(result.get("reason", ""))})
+	if Input.is_action_just_pressed("primary_action") and _capture_guard_frames <= 0:
 		if build_valid:
-			game.place_build(build_piece_id, build_preview.transform, build_parent_id)
+			var placed: bool = bool(game.place_build(build_piece_id, build_preview.transform, build_parent_id))
+			if placed and build_piece_id == "campfire":
+				set_build_mode(false)
 		else:
 			game.notify_player(str(result.get("reason", "Invalid placement")), "fail")
 
 func set_menu_open(open: bool) -> void:
 	menu_open = open
-	if not OS.has_feature("mobile"):
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if open else Input.MOUSE_MODE_CAPTURED
+	if touch_controls:
+		touch_controls.set_input_suppressed(open)
+	if not _uses_touch_controls():
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_release_runtime_input()
+	_publish_control_state()
 
 func select_hotbar(index: int) -> void:
 	selected_hotbar = clampi(index, 0, Tune.HOTBAR_SLOTS - 1)
 	if game and game.hud:
 		game.hud.set_hotbar_selection(selected_hotbar)
+	var item_id := selected_item_id()
+	var definition := ItemDB.get_item(item_id)
+	var behavior := str(definition.get("use_behavior", ""))
+	if behavior == "place_campfire" and not menu_open:
+		begin_piece_placement("campfire")
+	elif behavior == "build" and game:
+		game.notify_player("Building Plan selected · press B or BUILD to place shelter pieces.", "confirm")
+	WebRuntimeBridge.publish({"selectedHotbar": selected_hotbar, "selectedItem": item_id, "selectedPurpose": behavior})
 
 func apply_settings(new_settings: Dictionary) -> void:
 	settings.merge(new_settings, true)
+
+func selected_item_id() -> String:
+	if game == null or game.inventory == null or selected_hotbar < 0 or selected_hotbar >= game.inventory.slots.size():
+		return ""
+	return str(game.inventory.slots[selected_hotbar].get("item_id", ""))
+
+func _uses_touch_controls() -> bool:
+	return OS.has_feature("mobile") or (OS.has_feature("web") and DisplayServer.is_touchscreen_available()) or (touch_controls != null and touch_controls.visible)
+
+func _owns_control_focus() -> bool:
+	if menu_open:
+		return false
+	return true if _uses_touch_controls() else Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+
+func _release_runtime_input() -> void:
+	for action in ["move_forward", "move_back", "move_left", "move_right", "jump", "sprint", "crouch", "interact", "primary_action"]:
+		Input.action_release(action)
+	velocity.x = 0.0
+	velocity.z = 0.0
+	if touch_controls:
+		touch_controls.release_all()
+
+func _publish_control_state() -> void:
+	var focused := _owns_control_focus()
+	if game and game.hud:
+		game.hud.set_focus_prompt(not _uses_touch_controls() and not focused and not menu_open)
+	WebRuntimeBridge.publish({
+		"controlFocused": focused,
+		"focusPromptVisible": not _uses_touch_controls() and not focused and not menu_open,
+		"menuOpen": menu_open
+	})
 
 func world_transform_data() -> Dictionary:
 	return {

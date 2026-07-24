@@ -11,7 +11,17 @@ func _run() -> void:
 	_require("src/data/tune.gd")
 	_require("src/body/main.tscn")
 	_require("tools/acceptance_playthrough.gd")
+	_require("web/shell.html")
+	_require("package.json")
+	_require("package-lock.json")
+	_require("playwright.config.mjs")
+	_require("tests/browser/web_control_repair.spec.mjs")
 	_require("docs/3D_PIVOT.md")
+	_require("docs/reports/web_control_repair.md")
+	_require("docs/evidence/web-control-repair/desktop-initial.png")
+	_require("docs/evidence/web-control-repair/mobile-full-screen-layout.png")
+	_require("docs/evidence/web-control-repair/fire-placement-preview.png")
+	_require("docs/evidence/web-control-repair/successfully-placed-fire.png")
 	_require("DEPENDENCIES.md")
 	_validate_save_schema()
 	_validate_brain_boundary("res://src/brain")
@@ -47,11 +57,18 @@ func _validate_brain_boundary(path: String) -> void:
 
 func _validate_no_secrets(path: String) -> void:
 	for file_path in _files_recursive(path):
-		if file_path.contains("/.git/") or file_path.contains("/.godot/"):
+		if (
+			file_path.contains("/.git/")
+			or file_path.contains("/.godot/")
+			or file_path.contains("/node_modules/")
+			or file_path.contains("/builds/")
+			or file_path.contains("/playwright-report/")
+			or file_path.contains("/test-results/")
+		):
 			continue
 		if file_path.ends_with("/tools/static_validate.gd"):
 			continue
-		if not file_path.get_extension().to_lower() in ["gd", "md", "godot", "cfg", "yml", "yaml", "txt", "svg"]:
+		if not file_path.get_extension().to_lower() in ["gd", "md", "godot", "cfg", "yml", "yaml", "txt", "svg", "html", "js", "mjs", "json"]:
 			continue
 		var text := FileAccess.get_file_as_string(file_path)
 		for pattern in ["BEGIN PRIVATE KEY", "ghp_", "github_pat_", "AKIA"]:

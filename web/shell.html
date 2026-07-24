@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+	<title>$GODOT_PROJECT_NAME</title>
+	$GODOT_HEAD_INCLUDE
+	<style>
+		:root {
+			color-scheme: dark;
+			background: #07101b;
+			overscroll-behavior: none;
+		}
+		* {
+			box-sizing: border-box;
+		}
+		html,
+		body {
+			width: 100%;
+			height: 100%;
+			min-height: 100%;
+			margin: 0;
+			padding: 0;
+			overflow: hidden;
+			background: #07101b;
+			overscroll-behavior: none;
+			-webkit-user-select: none;
+			user-select: none;
+			-webkit-touch-callout: none;
+		}
+		#game-shell {
+			position: fixed;
+			inset: 0;
+			width: 100vw;
+			height: 100vh;
+			height: 100dvh;
+			padding:
+				env(safe-area-inset-top, 0)
+				env(safe-area-inset-right, 0)
+				env(safe-area-inset-bottom, 0)
+				env(safe-area-inset-left, 0);
+			overflow: hidden;
+			background: #07101b;
+			touch-action: none;
+		}
+		#canvas {
+			display: block;
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			border: 0;
+			outline: 0;
+			background: #07101b;
+			touch-action: none;
+		}
+		#status {
+			position: absolute;
+			inset: 0;
+			z-index: 2;
+			display: grid;
+			place-content: center;
+			gap: 0.75rem;
+			padding: 1.5rem;
+			color: #e9dcc0;
+			background: radial-gradient(circle at 50% 55%, #162536 0, #07101b 68%);
+			font: 600 0.95rem/1.4 system-ui, sans-serif;
+			letter-spacing: 0.08em;
+			text-align: center;
+			text-transform: uppercase;
+			pointer-events: none;
+		}
+		#status progress {
+			width: min(20rem, 72vw);
+			height: 0.45rem;
+			accent-color: #d6ad65;
+		}
+		#status[data-error="true"] {
+			color: #ffd2cc;
+			pointer-events: auto;
+			text-transform: none;
+		}
+	</style>
+</head>
+<body>
+	<main id="game-shell" aria-label="THE FIRST NIGHT game surface">
+		<canvas id="canvas" tabindex="0" aria-label="THE FIRST NIGHT"></canvas>
+		<div id="status" role="status" aria-live="polite">
+			<span id="status-text">Loading the island…</span>
+			<progress id="status-progress" max="1" value="0"></progress>
+		</div>
+	</main>
+	<script src="$GODOT_URL"></script>
+	<script>
+		"use strict";
+		window.__tfn = { shellReady: true, engineReady: false };
+		const canvas = document.getElementById("canvas");
+		const status = document.getElementById("status");
+		const statusText = document.getElementById("status-text");
+		const statusProgress = document.getElementById("status-progress");
+		const engine = new Engine($GODOT_CONFIG);
+
+		canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+		canvas.addEventListener("dragstart", (event) => event.preventDefault());
+
+		engine.startGame({
+			canvas,
+			canvasResizePolicy: 2,
+			onProgress(current, total) {
+				if (total > 0) {
+					statusProgress.value = current / total;
+					statusText.textContent = "Loading the island… " + Math.round(current / total * 100) + "%";
+				}
+			},
+			onPrintError(message) {
+				console.error(message);
+			}
+		}).then(() => {
+			window.__tfn.engineReady = true;
+			status.remove();
+		}).catch((error) => {
+			status.dataset.error = "true";
+			statusText.textContent = "The island could not load. Reload this page or check WebGL support.";
+			statusProgress.remove();
+			console.error(error);
+		});
+	</script>
+</body>
+</html>

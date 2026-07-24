@@ -267,10 +267,12 @@ func _test_body_interaction_contracts() -> void:
 	var button_texts: Array[String] = []
 	for button: Button in touch.find_children("*", "Button", true, false):
 		button_texts.append(button.text)
-	_expect_true("PIECE" in button_texts and "↶" in button_texts and "↷" in button_texts, "touch UI exposes build cycle and both rotations")
+	_expect_true("PLACE" in button_texts and "CANCEL" in button_texts and "ROTATE" in button_texts, "touch UI exposes explicit placement confirmation, cancellation, and rotation")
 	for number in ["1", "2", "3", "4", "5", "6"]:
 		_expect_true(number in button_texts, "touch hotbar exposes slot %s" % number)
 	touch.free()
+	var settings := WorldState.default_settings()
+	_expect_true(settings.has("touch_opacity") and float(settings.touch_opacity) >= Tune.TOUCH_MIN_OPACITY, "mobile control opacity has a persisted accessible default")
 
 	var persistent_drop := WorldState.new_game(100)
 	persistent_drop.resources = {

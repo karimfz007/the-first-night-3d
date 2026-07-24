@@ -43,6 +43,10 @@ func _run() -> void:
 	_craft_live(game, "building_plan", Tune.CRAFT_PLAN_SECONDS)
 	_expect(game.inventory.count("campfire_kit") == 1, "campfire kit crafted")
 	_expect(game.inventory.count("building_plan") == 1, "building plan crafted")
+	var fire_slot := _slot_for(game.inventory, "campfire_kit")
+	game.player.select_hotbar(fire_slot)
+	_expect(game.player.build_mode and game.player.build_piece_id == "campfire", "selecting the campfire kit immediately enters campfire placement")
+	game.player.set_build_mode(false)
 
 	game.player.global_position = Vector3(0.0, 1.0, -5.0)
 	await physics_frame

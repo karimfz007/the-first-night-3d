@@ -47,10 +47,13 @@ func _ready() -> void:
 	hud.root.add_child(touch_controls)
 	player.touch_controls = touch_controls
 	touch_controls.hotbar_selected.connect(player.select_hotbar)
+	player._publish_control_state()
+	_configure_local_browser_fixture()
 	_update_objective(true)
 	if not _morning_report.is_empty() and float(_morning_report.get("elapsed_real_seconds", 0.0)) >= Tune.OFFLINE_REPORT_MIN_SECONDS:
 		hud.call_deferred("show_morning_report", _morning_report)
 	notify_player("Regain control. The light is going.", "confirm")
+	WebRuntimeBridge.publish({"gameReady": true, "firePlacedCount": fires.size()})
 
 func _process(delta: float) -> void:
 	var frame_start := Time.get_ticks_usec()
@@ -165,7 +168,10 @@ func _update_crafting(delta: float) -> void:
 		var overflow := int(job.get("overflow", 0))
 		if overflow > 0:
 			spawn_loose_item(item_id, overflow, player.global_position + -player.global_basis.z)
-		notify_player("Crafted %s" % ItemDB.display_name(item_id), "craft")
+		var message := "Crafted %s" % ItemDB.display_name(item_id)
+		if item_id == "campfire_kit":
+			message += " · select its hotbar slot to place it."
+		notify_player(message, "craft")
 
 func crafting_text() -> String:
 	if crafting.queue.is_empty():
@@ -279,6 +285,7 @@ func place_build(piece_id: String, placement: Transform3D, parent_id: String = "
 		add_child(fire)
 		fires.append(fire)
 		build_nodes[save_id] = fire
+		WebRuntimeBridge.publish({"firePlacedCount": fires.size(), "lastPlacedPiece": piece_id})
 	else:
 		var piece := BuildPiece.new().configure(record)
 		add_child(piece)
@@ -455,9 +462,18 @@ func apply_setting(key: String, value: Variant) -> void:
 	player.settings[key] = value
 	if key == "audio_volume":
 		feedback.apply_volume(float(value))
-	if key in ["control_side", "touch_scale"] and touch_controls:
-		touch_controls._control_side = str(player.settings.get("control_side", "left_move"))
-		touch_controls._scale_value = float(player.settings.get("touch_scale", Tune.TOUCH_DEFAULT_SCALE))
+	if key in ["control_side", "touch_scale", "touch_opacity"] and touch_controls:
+		touch_controls.apply_settings(player.settings)
+	WebRuntimeBridge.publish({"lastSettingChanged": key})
+
+func _configure_local_browser_fixture() -> void:
+	if not WebRuntimeBridge.local_test_fixture_requested():
+		return
+	inventory = Inventory.new()
+	inventory.add("campfire_kit", 1)
+	inventory.add("driftwood", 4)
+	player.selected_hotbar = 5
+	WebRuntimeBridge.publish({"testFixture": "placement", "fixtureReady": true})
 
 func save_now(reason: String = "autosave") -> bool:
 	if player == null:

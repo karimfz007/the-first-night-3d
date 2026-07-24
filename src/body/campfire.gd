@@ -63,6 +63,7 @@ func _ready() -> void:
 	add_child(collision)
 	_create_smoke()
 	_update_visual()
+	_publish_state()
 
 func _create_smoke() -> void:
 	_smoke = GPUParticles3D.new()
@@ -97,6 +98,7 @@ func _process(delta: float) -> void:
 		var game := get_tree().get_first_node_in_group("game")
 		if game:
 			game.notify_player("The campfire gutters out.", "fail")
+		_publish_state()
 	if _flame:
 		_flame.scale.y = 0.85 + sin(Time.get_ticks_msec() * 0.011) * 0.12
 
@@ -115,14 +117,17 @@ func interact(game: Node, _player: Node) -> Dictionary:
 		if not game.consume_wood_for_fire():
 			return {"ok": false, "message": "Need driftwood or deadfall for fuel."}
 		fuel = minf(Tune.FIRE_FUEL_MAX, fuel + Tune.FIRE_FUEL_PER_WOOD)
+		_publish_state()
 		return {"ok": true, "message": "Dry wood rests inside the stone ring."}
 	if not lit:
 		lit = true
 		_update_visual()
 		game.feedback.cue("ignite")
+		_publish_state()
 		return {"ok": true, "message": "The fire catches. Warmth reaches your hands."}
 	if game.consume_wood_for_fire():
 		fuel = minf(Tune.FIRE_FUEL_MAX, fuel + Tune.FIRE_FUEL_PER_WOOD)
+		_publish_state()
 		return {"ok": true, "message": "Fuel added · %s" % fuel_text()}
 	return {"ok": false, "message": "No wood available."}
 
@@ -131,6 +136,7 @@ func strike(_game: Node, _player: Node, _tool_equipped: bool) -> Dictionary:
 		return {"ok": false, "message": "The campfire is already out."}
 	lit = false
 	_update_visual()
+	_publish_state()
 	return {"ok": true, "message": "The flames are smothered; the remaining fuel is preserved."}
 
 func is_heating(point: Vector3) -> bool:
@@ -155,3 +161,6 @@ func _update_visual() -> void:
 		_light.visible = lit
 	if _smoke:
 		_smoke.emitting = lit
+
+func _publish_state() -> void:
+	WebRuntimeBridge.publish({"fireLit": lit, "fireFuel": fuel})
