@@ -68,7 +68,8 @@ jobs:
           godot --headless --path . --script tools/smoke_boot.gd
           godot --headless --path . --script tools/acceptance_playthrough.gd
           godot --headless --path . --script tools/static_validate.gd
-          mkdir -p builds/windows builds/android
+          mkdir -p builds/web builds/windows builds/android
+          godot --headless --path . --export-release "Web" builds/web/index.html
           godot --headless --path . --export-release "Windows" builds/windows/THE_FIRST_NIGHT.exe
           (cd builds/windows && zip -9 ../THE_FIRST_NIGHT-windows.zip THE_FIRST_NIGHT.exe)
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH="${HOME}/.android/debug.keystore" \
@@ -76,6 +77,12 @@ jobs:
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android" \
             godot --headless --path . --export-debug "Android" builds/android/the-first-night-debug.apk
           (cd builds && sha256sum THE_FIRST_NIGHT-windows.zip android/the-first-night-debug.apk > SHA256SUMS.txt)
+
+      - name: Responsive browser and control verification
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run test:browser
 
       - name: Create immutable prerelease
         shell: bash

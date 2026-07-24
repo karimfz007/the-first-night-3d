@@ -20,6 +20,14 @@ Android export CI pins OpenJDK 17 plus Android SDK Platform 35, Platform-Tools
 35.0.0 or later, and Build-Tools 35.0.1, following the Godot 4.6 export
 requirements. These are build-only tools and are not bundled with the game.
 
+Browser verification pins **Playwright 1.61.1** (`@playwright/test`,
+Apache-2.0) in `package-lock.json`. It is a development/CI-only dependency used
+to exercise the exported Web build in desktop Chromium and touch-capable
+Android-landscape emulation, assert pointer-lock and responsive-control state,
+and capture review evidence. It is not included in game exports. Exit path:
+replace `tests/browser` with an equivalent WebDriver/CDP harness and remove the
+private npm package files.
+
 ## Evaluated and not adopted
 
 | Candidate | Pin evaluated | License | Decision and exit |

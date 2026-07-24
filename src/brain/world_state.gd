@@ -31,6 +31,7 @@ static func default_settings() -> Dictionary:
 		"audio_volume": Tune.DEFAULT_AUDIO_VOLUME,
 		"control_side": "left_move",
 		"touch_scale": Tune.TOUCH_DEFAULT_SCALE,
+		"touch_opacity": Tune.TOUCH_DEFAULT_OPACITY,
 		"debug_overlay": false
 	}
 
@@ -51,6 +52,14 @@ static func sanitized(data: Dictionary) -> Dictionary:
 	for key: String in defaults:
 		if not settings.has(key):
 			settings[key] = defaults[key]
+	settings["look_sensitivity"] = clampf(Tune.finite_number(settings.get("look_sensitivity"), Tune.LOOK_SENSITIVITY), 0.0006, 0.006)
+	settings["touch_sensitivity"] = clampf(Tune.finite_number(settings.get("touch_sensitivity"), Tune.TOUCH_SENSITIVITY), 0.001, 0.009)
+	settings["bob_intensity"] = clampf(Tune.finite_number(settings.get("bob_intensity"), Tune.DEFAULT_BOB_INTENSITY), 0.0, 1.0)
+	settings["audio_volume"] = clampf(Tune.finite_number(settings.get("audio_volume"), Tune.DEFAULT_AUDIO_VOLUME), 0.0, 1.0)
+	settings["touch_scale"] = clampf(Tune.finite_number(settings.get("touch_scale"), Tune.TOUCH_DEFAULT_SCALE), Tune.TOUCH_MIN_SCALE, Tune.TOUCH_MAX_SCALE)
+	settings["touch_opacity"] = clampf(Tune.finite_number(settings.get("touch_opacity"), Tune.TOUCH_DEFAULT_OPACITY), Tune.TOUCH_MIN_OPACITY, Tune.TOUCH_MAX_OPACITY)
+	settings["control_side"] = "right_move" if str(settings.get("control_side", "left_move")) == "right_move" else "left_move"
+	settings["invert_look"] = bool(settings.get("invert_look", false))
 	player["settings"] = settings
 	state["player"] = player
 	state["inventory"] = Inventory.from_dict(state.get("inventory", {})).to_dict()
@@ -65,4 +74,3 @@ static func sanitized(data: Dictionary) -> Dictionary:
 		state["stable_ids"] = {"counter": 1}
 	state["objective_index"] = maxi(0, int(state.get("objective_index", 0)))
 	return state
-

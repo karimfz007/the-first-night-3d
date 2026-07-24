@@ -94,6 +94,22 @@ jobs:
           mkdir -p builds/web
           godot --headless --path . --export-release "Web" builds/web/index.html
 
+      - name: Install browser verification
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Responsive browser and control verification
+        run: npm run test:browser
+
+      - name: Upload browser evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-control-repair-evidence-${{ github.sha }}
+          path: docs/evidence/web-control-repair/*.png
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Export Windows
         run: |
           mkdir -p builds/windows

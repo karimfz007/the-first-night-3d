@@ -15,6 +15,11 @@
 - Placeholder audio is synthesized and intentionally sparse.
 - Browser persistence depends on the platform completing IndexedDB-backed user
   storage flushes; focus-loss and periodic saves reduce risk.
+- Fullscreen remains subject to browser support, user gesture rules, and user
+  refusal; the responsive canvas remains usable without it.
+- Touch-capable Chromium emulation verifies responsive layout and multitouch
+  routing, not the native Android APK's device-specific gesture, keyboard,
+  thermal, or lifecycle behavior.
 - GitHub-hosted CI proves Android SDK/export-template compatibility and produces
   a signed debug APK, but does not prove runtime behavior on Android hardware.
 - No measured Director-device FPS, thermal, memory, download-size, or input
