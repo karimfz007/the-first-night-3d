@@ -204,10 +204,15 @@ test("touch hotbar enters, cancels, and completes campfire placement", async ({ 
   await tapNormalized(page, state.placementButtons[0]);
   await expect.poll(async () => (await runtime(page)).firePlacedCount).toBe(1);
   await expect.poll(async () => (await runtime(page)).placementMode).toBe(false);
-  await page.screenshot({ path: join(evidence, "successfully-placed-fire.png") });
 
   state = await runtime(page);
-  await holdNormalized(page, state.actionButtons.interact);
-  await holdNormalized(page, state.actionButtons.interact);
+  for (let attempt = 0; attempt < 4 && (await runtime(page)).fireFuel <= 0; attempt += 1) {
+    await holdNormalized(page, state.actionButtons.interact);
+  }
+  await expect.poll(async () => (await runtime(page)).fireFuel).toBeGreaterThan(0);
+  for (let attempt = 0; attempt < 4 && !(await runtime(page)).fireLit; attempt += 1) {
+    await holdNormalized(page, state.actionButtons.interact);
+  }
   await expect.poll(async () => (await runtime(page)).fireLit).toBe(true);
+  await page.screenshot({ path: join(evidence, "successfully-placed-fire.png") });
 });
